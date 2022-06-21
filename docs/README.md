@@ -7,7 +7,6 @@ Generate text line images for training deep learning OCR model (e.g. [CRNN](http
 - [x] Support apply effects on different stages of rendering process [corpus_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg), [layout_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg), [render_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg).
 - [x] Generate vertical text.
 - [x] Support generate `lmdb` dataset which compatible with [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR), see [Dataset](https://oh-my-ocr.github.io/text_renderer/dataset.html)
-- [x] A web font viewer.
 - [ ] Corpus sampler: helpful to perform character balance
 
 [Documentation](https://oh-my-ocr.github.io/text_renderer/index.html)
@@ -190,7 +189,6 @@ Find all effect/layout config example at [link](https://github.com/oh-my-ocr/tex
 
 
 ## Contribution
-Setup [Commitizen](http://commitizen.github.io/cz-cli/) for commit message
 
 - Corpus: Feel free to contribute more corpus generators to the project, 
   It does not necessarily need to be a generic corpus generator, but can also be a business-specific generator, 
@@ -219,14 +217,6 @@ docker run --rm \
 text_renderer
 ```
 
-## Font Viewer
-Start font viewer
-
-```bash
-streamlit run tools/font_viewer.py -- web /path/to/fonts_dir
-```
-![image](./image/font_viewer.png)
-
 ## Build docs
 
 ```bash
@@ -234,6 +224,8 @@ cd docs
 make html
 open _build/html/index.html
 ```
+
+Open `_build/html/index.html`
 
 
 ## Citing text_renderer
