@@ -94,7 +94,8 @@ class FixedTextColorCfg(TextColorCfg):
     # For generate effect/layout example
     def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
         alpha = 255
-        text_color = (255, 50, 0, alpha)
+        text_color = (0,0,0,alpha)
+        # text_color = (255, 50, 0, alpha)
 
         return text_color
 
@@ -109,15 +110,35 @@ class SimpleTextColorCfg(TextColorCfg):
 
     def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
         np_img = np.array(bg_img)
-        mean = np.mean(np_img)
+        mean = np.mean(np_img,axis=(0,1))[:3]
 
         alpha = np.random.randint(*self.alpha)
-        r = np.random.randint(0, int(mean * 0.7))
-        g = np.random.randint(0, int(mean * 0.7))
-        b = np.random.randint(0, int(mean * 0.7))
+        safe_value = 70
+        r = np.random.randint(0,int(mean[0])-safe_value) if mean[0]>127 else np.random.randint(int(mean[0])+safe_value,255)
+        g = np.random.randint(0,int(mean[1])-safe_value) if mean[1]>127 else np.random.randint(int(mean[1])+safe_value,255)
+        b = np.random.randint(0,int(mean[2])-safe_value) if mean[2]>127 else np.random.randint(int(mean[2])+safe_value,255)
+
+
         text_color = (r, g, b, alpha)
 
         return text_color
+
+    # def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
+    #     np_img = np.array(bg_img)
+    #     mean = np.mean(np_img)
+    #
+    #     alpha = np.random.randint(*self.alpha)
+    #
+    #
+    #
+    #     r = np.random.randint(0, int(mean * 0.7))
+    #     g = np.random.randint(0, int(mean * 0.7))
+    #     b = np.random.randint(0, int(mean * 0.7))
+    #
+    #
+    #     text_color = (r, g, b, alpha)
+    #
+    #     return text_color
 
 
 # noinspection PyUnresolvedReferences

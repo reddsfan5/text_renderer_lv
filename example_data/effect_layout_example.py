@@ -22,16 +22,19 @@ from text_renderer.config import (
 from text_renderer.effect.curve import Curve
 from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 
+NUM_IMG  = 50
+
+
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 BG_DIR = CURRENT_DIR / "bg"
 
 font_cfg = dict(
-    font_dir=CURRENT_DIR / "font"/'font_mini',
+    font_dir=CURRENT_DIR / "font" / 'font_mini',
     font_size=(30, 31),
 )
 
 small_font_cfg = dict(
-    font_dir=CURRENT_DIR / "font"/'font_multi',
+    font_dir=CURRENT_DIR / "font" / 'font_multi',
     font_size=(20, 21),
 )
 
@@ -51,6 +54,24 @@ def base_cfg(name: str):
             ),
         ),
     )
+
+
+def effect_ensemble(items=None):
+    # print(inspect.currentframe().f_code.co_name)
+    cfg = base_cfg(inspect.currentframe().f_code.co_name)  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
+    cfg.num_image = NUM_IMG
+    cfg.render_cfg.gray = False
+    cfg.render_cfg.corpus = [EnumCorpus(
+        EnumCorpusCfg(
+            items=items if items else ['Hello! 【你好】[english]'],
+            text_color_cfg=SimpleTextColorCfg(),
+            # text_color_cfg=FixedTextColorCfg(),
+            **font_cfg,
+        ),
+    ), ]
+    # cfg.render_cfg.perspective_transform = FixedPerspectiveTransformCfg(30, 30, 1.5)
+    # cfg.render_cfg.corpus.cfg.horizontal = False
+    return cfg
 
 
 def dropout_rand():
@@ -152,16 +173,18 @@ def extra_text_line_layout():
 
 def color_image(items=None):
     # print(inspect.currentframe().f_code.co_name)
-    cfg = base_cfg(inspect.currentframe().f_code.co_name)
-    cfg.num_image = 10
+    cfg = base_cfg(inspect.currentframe().f_code.co_name)  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
+    cfg.num_image = 1000
     cfg.render_cfg.gray = False
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
-            items=items if items else ['Hello! 你好！'],
-            text_color_cfg=FixedTextColorCfg(),
+            items=items if items else ['Hello! 【你好】[english]'],
+            text_color_cfg=SimpleTextColorCfg(),
+            # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
         ),
-    ),]
+    ), ]
+    cfg.render_cfg.perspective_transform = FixedPerspectiveTransformCfg(30, 30, 1.5)
     # cfg.render_cfg.corpus.cfg.horizontal = False
     return cfg
 
@@ -223,12 +246,10 @@ def emboss():
     )
     return cfg
 
-txt_path = r'E:\lxd\PaddleOCR\StyleText\examples\corpus/book_name.txt'
-with open(txt_path,mode='r',encoding='gbk') as f:
+
+txt_path = r'E:\lxd\PaddleOCR\StyleText\examples\corpus/corpus_merged_less_25.txt'
+with open(txt_path, mode='r', encoding='utf8') as f:
     text_list = f.read().split('\n')[:-1]
-
-
-
 
 vertical = True
 
@@ -243,7 +264,10 @@ if vertical:
         # char_spacing_large(),
         # *line(),
         # perspective_transform(),
-        color_image(text_list),
+        # effect_ensemble(),
+        effect_ensemble(text_list),
+        # color_image(text_list),
+        # color_image(),
         # dropout_rand(),
         # dropout_horizontal(),
         # dropout_vertical(),
@@ -264,12 +288,11 @@ else:
         # char_spacing_large(),
         # *line(),
         # perspective_transform(),
-        color_image(text_list),
+        # color_image(text_list),
+        effect_ensemble(text_list)
         # dropout_rand(),
         # dropout_horizontal(),
         # dropout_vertical(),
         # padding(),
         # same_line_layout_different_font_size(),
     ]
-
-

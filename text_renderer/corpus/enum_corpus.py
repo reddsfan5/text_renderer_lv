@@ -76,5 +76,10 @@ class EnumCorpus(Corpus):
                 )
 
     def get_text(self):
-        text = random_choice(self.texts, self.cfg.num_pick)
+        #todo lvxiaodong
+        if not self.texts:
+            return
+        # 文本遍历模式
+        text = self.texts.pop()
+        # text = random_choice(self.texts, self.cfg.num_pick)
         return self.cfg.join_str.join(text)

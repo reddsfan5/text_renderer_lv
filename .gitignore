@@ -21,4 +21,6 @@ package.json
 package-lock.json
 
 example_data/font
+example_data/effect_layout_image
+example_data/font_show
 

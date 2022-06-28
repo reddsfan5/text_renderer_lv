@@ -87,18 +87,23 @@ class ImgDataset(Dataset):
             os.makedirs(self._img_dir)
         self._label_path = os.path.join(data_dir, self.LABEL_NAME)
 
-        self._data = {"num-samples": 0, "labels": {}, "sizes": {}}
+        self._data = {"num-samples": 0, "labels": {}, "sizes": {}, "bboxes": {}}
         if os.path.exists(self._label_path):
             with open(self._label_path, "r", encoding="utf-8") as f:
                 self._data = json.load(f)
 
-    def write(self, name: str, image: np.ndarray, label: str):
+    def write(self, name: str, image: np.ndarray, label: str, bbox=None):
         img_path = os.path.join(self._img_dir, name + ".jpg")
         cv2.imwrite(img_path, image, self.encode_param())
         self._data["labels"][name] = label
 
         height, width = image.shape[:2]
         self._data["sizes"][name] = (width, height)
+        # todo lvixaodong 增加坐标
+        if bbox:
+            if 'bboxes' not in self._data.keys():
+                self._data['bboxes'] = {}
+            self._data['bboxes'][name] = bbox
 
     def read(self, name: str) -> Dict:
         img_path = os.path.join(self._img_dir, name + ".jpg")
