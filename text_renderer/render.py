@@ -18,7 +18,7 @@ from text_renderer.utils.math_utils import PerspectiveTransform
 from text_renderer.utils.bbox import BBox
 from text_renderer.utils.font_text import FontText
 from text_renderer.utils.types import FontColor, is_list
-
+from text_renderer.utils.draw_utils import Imgerror
 
 class Render:
     def __init__(self, cfg: RenderCfg):
@@ -51,7 +51,7 @@ class Render:
             if self._should_apply_layout():
                 img, text, cropped_bg, transformed_text_mask = self.gen_multi_corpus()
             else:
-                img, text, cropped_bg, transformed_text_mask,bbox = self.gen_single_corpus()
+                img, text, cropped_bg, transformed_text_mask,bbox,font_base = self.gen_single_corpus()
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -82,10 +82,12 @@ class Render:
                 np_img = np.array(img)
                 np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
                 # np_img = self.norm(np_img)
-            return np_img, text,bbox
+            return np_img, text,bbox,font_base
+
         except Exception as e:
-            logger.exception(e)
-            raise e
+            raise Imgerror()
+            # logger.exception(e)
+            # raise e
 
     def gen_single_corpus(self) -> Tuple[PILImage, str, PILImage, PILImage]:
         font_text = self.corpus.sample()
@@ -99,9 +101,13 @@ class Render:
             text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
 
         # 书写文本接口,写在透明背景上
-        text_mask,bbox = draw_text_on_bg_hv(
-            font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,save_dir=r'E:\lxd\text_renderer_lv\example_data\font_show'
+
+        text_mask,bbox,font_base = draw_text_on_bg_hv(
+            font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,save_dir=r'E:\lxd\OCR_project\OCR_SOURCE\font\font_show'
         )
+
+
+
 
         if self.cfg.corpus_effects is not None:
             text_mask, _ = self.cfg.corpus_effects.apply_effects(
@@ -127,7 +133,7 @@ class Render:
 
         img, cropped_bg = self.paste_text_mask_on_bg(bg, transformed_text_mask)
 
-        return img, font_text.text, cropped_bg, transformed_text_mask,bbox
+        return img, font_text.text, cropped_bg, transformed_text_mask,bbox,font_base
 
     def gen_multi_corpus(self) -> Tuple[PILImage, str, PILImage, PILImage]:
         font_texts: List[FontText] = [it.sample() for it in self.corpus]

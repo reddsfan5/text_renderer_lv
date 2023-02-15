@@ -78,8 +78,20 @@ class EnumCorpus(Corpus):
     def get_text(self):
         #todo lvxiaodong
         if not self.texts:
-            return
+            with open(r'E:\lxd\OCR_project\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8',
+                      mode='r') as chr:
+                chr_set = set(chr.read().split('\n'))
+            txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\corpus\author_bookname/filtered_author_bookname.txt'
+            with open(txt_path, mode='r', encoding='utf8') as f:
+                # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
+                text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
+                # 防止空行
+                text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
+                text_list = [text for text in text_list if text]
+            self.texts = text_list
         # 文本遍历模式
         text = self.texts.pop()
+        # todo watch text info
+        # print(text)
         # text = random_choice(self.texts, self.cfg.num_pick)
         return self.cfg.join_str.join(text)

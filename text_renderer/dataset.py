@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Dict
-
+from lmdbs.lmdbs.utils import b64encode_img, b64decode_img
 import lmdb
 import cv2
 import numpy as np
@@ -92,6 +92,7 @@ class ImgDataset(Dataset):
             with open(self._label_path, "r", encoding="utf-8") as f:
                 self._data = json.load(f)
 
+
     def write(self, name: str, image: np.ndarray, label: str, bbox=None):
         img_path = os.path.join(self._img_dir, name + ".jpg")
         cv2.imwrite(img_path, image, self.encode_param())
@@ -104,6 +105,20 @@ class ImgDataset(Dataset):
             if 'bboxes' not in self._data.keys():
                 self._data['bboxes'] = {}
             self._data['bboxes'][name] = bbox
+
+
+    # def write(self, name: str, image: np.ndarray, label: str, bbox=None):
+    #     img_path = os.path.join(self._img_dir, name + ".jpg")
+    #     cv2.imwrite(img_path, image, self.encode_param())
+    #     self._data["labels"][name] = label
+    #
+    #     height, width = image.shape[:2]
+    #     self._data["sizes"][name] = (width, height)
+    #     # todo lvixaodong 增加坐标
+    #     if bbox:
+    #         if 'bboxes' not in self._data.keys():
+    #             self._data['bboxes'] = {}
+    #         self._data['bboxes'][name] = bbox
 
     def read(self, name: str) -> Dict:
         img_path = os.path.join(self._img_dir, name + ".jpg")
@@ -139,18 +154,39 @@ class LmdbDataset(Dataset):
 
     def __init__(self, data_dir: str):
         super().__init__(data_dir)
-        self._lmdb_env = lmdb.open(self.data_dir, map_size=1099511627776)  # 1T
+        self._lmdb_env = lmdb.open(self.data_dir, map_size=20e9)  # 40G
         self._lmdb_txn = self._lmdb_env.begin(write=True)
 
-    def write(self, name: str, image: np.ndarray, label: str):
-        self._lmdb_txn.put(
-            self.image_key(name),
-            cv2.imencode(".jpg", image, self.encode_param())[1].tobytes(),
-        )
-        self._lmdb_txn.put(self.label_key(name), label.encode())
+    # def write_backup(self, name: str, image: np.ndarray, label: str,bbox=None):
+    #     self._lmdb_txn.put(
+    #         self.image_key(name),
+    #         cv2.imencode(".jpg", image, self.encode_param())[1].tobytes(),
+    #     )
+    #     self._lmdb_txn.put(self.label_key(name), label.encode())
+    #
+    #     height, width = image.shape[:2]
+    #     self._lmdb_txn.put(self.size_key(name), f"{width},{height}".encode())
 
-        height, width = image.shape[:2]
-        self._lmdb_txn.put(self.size_key(name), f"{width},{height}".encode())
+    def write(self, name: str, image: np.ndarray, label: str,bbox=None,font_base=None):
+        tar_dict = {}
+        img_base = name
+        img_arr = image
+        img_byte = b64encode_img(img_arr)
+        h,w = img_arr.shape[:2]
+        points = [[0,0],[w,0],[w,h],[0,h]] if not bbox else bbox
+        bbox_tuple = (f'{img_base}', [
+            {
+                "transcription": f'{label}',
+                "illegibility": 0,
+                "points": points,
+                'font':font_base
+
+            }
+        ])
+        imgp, trans = bbox_tuple
+        trans[0]['image'] = img_byte
+
+        self._lmdb_txn.put(img_base.encode(), json.dumps(trans[0]).encode('utf8'))
 
     def read(self, name: str) -> Dict:
         label = self._lmdb_txn.get(self.label_key(name)).decode()

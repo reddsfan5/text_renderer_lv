@@ -3,8 +3,9 @@ import os
 from pathlib import Path
 import imgaug.augmenters as iaa
 import sys
-sys.path.append(r'E:\lxd\text_renderer\example_data')
-from effect_layout_example import vertical_text
+# sys.path.append(r'E:\lxd\OCR_project\text_renderer_lv\example_data')
+print(sys.path)
+from example_data.effect_layout_example import vertical_text
 from text_renderer.effect import *
 from text_renderer.corpus import *
 from text_renderer.config import (

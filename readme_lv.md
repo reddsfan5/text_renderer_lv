@@ -70,3 +70,10 @@ E:\lxd\text_renderer_lv\main.py
   ![bookseg_0430_183237_11_IMG20220430161931_00000](readme_lv.assets/bookseg_0430_183237_11_IMG20220430161931_00000.jpg)
 
 ### 2.逼近原始文本语义
+
+## 程序意外暂停分析
+不支持的字体，系统会重新计数，但是列表总数一定，每次都会pop一个，最后计数没到，但列表已空，导致卡呆呆的。
+
+## 不合格字体删除
+1.main.py 运行时，不支持的字体会在E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport.txt文件里生成。
+2.运行，costum_utils.font_check_and_remove.py 删除对应字体。

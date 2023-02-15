@@ -323,6 +323,24 @@ def json_name2json_file(json_dir, dst_dir, img_suffix='.jpg'):
             f.write(data)
 
 
+# jd['shapes'][index]['flags']['text']
+
+def json_text2json_label(json_dir, dst_dir):
+    json_file = [file for file in os.listdir(json_dir) if file.endswith('.json')]
+    for jf in json_file:
+        print(jf)
+        jd = getJsonDict(os.path.join(json_dir, jf))
+        for shp in jd['shapes']:
+            shp['label'] = shp['flags']['text']
+
+        if not osp.exists(dst_dir):
+            os.mkdir(dst_dir)
+        with open(os.path.join(dst_dir, jf), mode='w', encoding='utf8') as f:
+            data = json.dumps(jd)
+            f.write(data)
+
+
+
 def modify_label(json_dict, label_dict):
     shapes = json_dict['shapes']
     # assert len(shapes) == len(polygon_list), f'传入标注框数目{len(polygon_list)}与json_dict[shapes]数目{len(shapes)}不匹配'
@@ -717,6 +735,8 @@ if __name__ == '__main__':
     img_path = r'E:\lxd_dataset\Museum\福州博物馆文物封面图\3d_img_show'
     cuted = r'E:\lxd_dataset\Museum\cut_out_all\cuted_data\from_video_aug_specify_13_14_35'
     sec_dir = r'E:\lxd_dataset\Museum\cut_out_all\cuted_data\from_video_aug_3_ext'
+    # getJsonDict(r'D:\dataset\OCR\shujutang_all_0628/')
+    json_text2json_label(r'D:\dataset\OCR\shujutang_all_0628/',r'D:\dataset\OCR\shujutang_json_label_modify')
     # img_features_to_json(img_dir)
     # all_to_mum(json_dir,dst_path)
 
@@ -728,7 +748,7 @@ if __name__ == '__main__':
     # second_order_couple_modify_label(json_dir,dst1,label_dict=ch2en)
     # abstract_data_2_onedir(dst1,dst2)
     # subs = [osp.join(img_path,basename) for basename in os.listdir(img_path)]
-    json_name2json_file(r'D:\dataset\OCR\图书ocr补充数据\补充数据\shujutang_complement',r'D:\dataset\OCR\图书ocr补充数据\补充数据\json')
+    # json_name2json_file(r'D:\dataset\OCR\图书ocr补充数据\补充数据\shujutang_complement',r'D:\dataset\OCR\图书ocr补充数据\补充数据\json')
 
     # for sub in subs:
     #     json_name2json_file(sub,json_dir)

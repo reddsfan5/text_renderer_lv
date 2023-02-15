@@ -2,7 +2,7 @@ import random
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Set, Tuple, Dict, Optional
-
+import os
 from PIL import ImageFont
 from PIL.ImageFont import FreeTypeFont
 from fontTools.ttLib import TTFont, TTCollection
@@ -56,6 +56,9 @@ class FontManager:
 
     def check_support(self, text: str, chars: Set) -> Tuple[bool, Set]:
         # Check whether all chars in text exist in chars
+        # with open(r'E:\lxd\OCR_project\OCR_SOURCE\corpus\merged/filtered_path.txt', encoding='utf8', mode='r') as chr:
+        #     text_set = set(chr.read().split('\n'))
+
         text_set = set(text)
         intersect = text_set - chars
         status = len(intersect) == 0
@@ -73,6 +76,7 @@ class FontManager:
                         chars_int.add(k)
             except AssertionError as e:
                 logger.error(f"Load font file {font_path} failed, skip it. Error: {e}")
+                # os.remove(font_path)
 
             supported_chars = set([chr(c_int) for c_int in chars_int])
 
@@ -154,7 +158,7 @@ class FontManager:
         """
 
         # ttc is collection of ttf
-        if font_path.endswith("ttc"):
+        if font_path.endswith(("ttc","TTC")):
             ttc = TTCollection(font_path)
             # assume all ttfs in ttc file have same supported chars
             return ttc.fonts[0]
@@ -163,6 +167,7 @@ class FontManager:
             font_path.endswith("ttf")
             or font_path.endswith("TTF")
             or font_path.endswith("otf")
+            or font_path.endswith("OTF")
         ):
             ttf = TTFont(
                 font_path, 0, allowVID=0, ignoreDecompileErrors=True, fontNumber=-1
@@ -174,3 +179,44 @@ class FontManager:
     def _get_font(self, font_path: str, font_size: int) -> FreeTypeFont:
         font = ImageFont.truetype(font_path, font_size)
         return font
+
+def font_check_rm_wrong(font_paths):
+    for font_path in font_paths:
+        print(font_path)
+        if font_path.endswith(("ttc","TTC")):
+            ttc = TTCollection(font_path)
+            # assume all ttfs in ttc file have same supported chars
+            ttf = ttc.fonts[0]
+
+        elif (
+                font_path.endswith("ttf")
+                or font_path.endswith("TTF")
+                or font_path.endswith("otf")
+                or font_path.endswith("OTF")
+        ):
+            ttf = TTFont(
+                font_path, 0, allowVID=0, ignoreDecompileErrors=True, fontNumber=-1
+            )
+        else:
+            continue
+        try:
+            for table in ttf["cmap"].tables:
+                for k, v in table.cmap.items():
+                    pass
+                print()
+        except AssertionError as e:
+            logger.error(f"Load font file {font_path} failed, skip it. Error: {e}")
+            # os.remove(font_path)
+        ttf.close()
+
+
+if __name__ == '__main__':
+    font_dir_path = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\tem')
+    font_file_path= Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_file\font_file.txt')
+    # font_file_path = None
+    # for _ in range(10):
+    #     fm =  FontManager(font_dir_path,font_file_path,(10,20))
+    #
+    #     print(f'{font_file_path}有问题')
+
+    # print(fm.font_support_chars_cache)

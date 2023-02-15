@@ -10,22 +10,23 @@ from loguru import logger
 from text_renderer.config import get_cfg, GeneratorCfg
 from text_renderer.dataset import LmdbDataset, ImgDataset
 from text_renderer.render import Render
+from text_renderer.utils.draw_utils import Imgerror
 
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
 
-# each child process will initialize Render in process_setup
+# each child process will initialize Render in process_setup 符号 : 为类型建议符；类型注解
 render: Render
 
 
 class DBWriterProcess(Process):
     def __init__(
-        self,
-        dataset_cls,
-        data_queue,
-        generator_cfg: GeneratorCfg,
-        log_period: float = 1,
+            self,
+            dataset_cls,
+            data_queue,
+            generator_cfg: GeneratorCfg,
+            log_period: float = 1,
     ):
         super().__init__()
         self.dataset_cls = dataset_cls
@@ -50,25 +51,28 @@ class DBWriterProcess(Process):
                         break
 
                     name = "{:09d}".format(exist_count + count)
-                    db.write(name, m["image"], m["label"],m["bbox"])
+                    db.write('id-' + name, m["image"], m["label"], m["bbox"], m["font"])
                     count += 1
                     if count % log_period == 0:
                         logger.info(
-                            f"{(count/num_image)*100:.2f}%({count}/{num_image}) {log_period/(time.time() - start + 1e-8):.1f} img/s"
+                            f"{(count / num_image) * 100:.2f}%({count}/{num_image}) {log_period / (time.time() - start + 1e-8):.1f} img/s"
                         )
                         start = time.time()
                 db.write_count(count + exist_count)
                 logger.info(f"{(count / num_image) * 100:.2f}%({count}/{num_image})")
-                logger.info(f"Finish generate: {count}. Total: {exist_count+count}")
+                logger.info(f"Finish generate: {count}. Total: {exist_count + count}")
         except Exception as e:
             logger.exception("DBWriterProcess error")
             raise e
 
 
 def generate_img(data_queue):
-    data = render()
+    try:
+        data = render()
+    except Imgerror:
+        data = None
     if data is not None:
-        data_queue.put({"image": data[0], "label": data[1],"bbox":data[2]})
+        data_queue.put({"image": data[0], "label": data[1], "bbox": data[2], 'font': data[3]})
 
 
 def process_setup(*args):
@@ -93,9 +97,21 @@ def parse_args():
 
 if __name__ == "__main__":
     '''
-    --config .\example_data/effect_layout_example.py --dataset img --num_processes 1 --log_period 10
+    --config .\example_data/effect_layout_example.py --dataset img --num_processes 1 --log_period 2
     
-    --config .\example_data/example.py --dataset img --num_processes 1 --log_period 10
+    --config .\example_data/example.py --dataset img --num_processes 1 --log_period 2
+    '''
+    r'''
+    当前困惑：不支持字体是如何使程序的计数出现问题，导致 data_queue.put(STOP_TOKEN) 没有执行的。
+    
+    40 extra bytes in post.stringData array:
+    
+    This problem is reported by fontTools, and it seems to be caused to a font file containing extra data. 
+    It’s just a warning, so if your PDF document doesn’t have any errors, you can safely ignore it.
+    
+    
+    font show: E:\lxd\OCR_project\OCR_SOURCE\font\font_show
+    font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
     '''
 
     mp.set_start_method("spawn", force=True)
@@ -121,9 +137,9 @@ if __name__ == "__main__":
             db_writer_process.join()
         else:
             with mp.Pool(
-                processes=args.num_processes,
-                initializer=process_setup,
-                initargs=(generator_cfg.render_cfg,),
+                    processes=args.num_processes,
+                    initializer=process_setup,
+                    initargs=(generator_cfg.render_cfg,),
             ) as pool:
                 for _ in range(generator_cfg.num_image):
                     pool.apply_async(generate_img, args=(data_queue,))

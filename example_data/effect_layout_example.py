@@ -1,13 +1,9 @@
-# All Effect/Layout example config
-# 1. Run effect_layout_example.py, generate images in effect_layout_image
-# 2. Update README.md
 import inspect
 import os
 from dataclasses import dataclass
 from pathlib import Path
-
 import numpy as np
-
+import time
 from text_renderer.effect import *
 from text_renderer.corpus import *
 from text_renderer.config import (
@@ -22,19 +18,52 @@ from text_renderer.config import (
 from text_renderer.effect.curve import Curve
 from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 
-NUM_IMG  = 50
+'''
+1.corpus 文件要用utf8编码格式
+2.各个路径不用字符串，而是Path 对象。
 
+'''
 
+with open(r'E:\lxd\OCR_project\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8', mode='r') as chr:
+    chr_set = set(chr.read().split('\n'))
+txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\corpus\author_bookname/filtered_author_bookname_simple.txt'
+# txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\font/rare1.txt'
+with open(txt_path, mode='r', encoding='utf8') as f:
+    # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
+    text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
+    # 防止空行
+    text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
+    text_list = [text for text in text_list if text]
+
+    # list(set(text_list)).sort()
+left = int(0)
+right = left + 900
+
+NUM_IMG = len(text_list[left:right])
+# NUM_IMG = 10
+print(text_list[left:left + 10])
+print(f'目标图像数目：{NUM_IMG}')
+
+local_time = time.localtime()
+mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
+
+DST_DIR = Path(f'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
+BG_DIR = Path(r'E:\lxd\OCR_project\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
-BG_DIR = CURRENT_DIR / "bg"
+
+FONT_SMP = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\简体-简体-低风险')
+FONT_MINI = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_mini')
+FONT_ART = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_art')
+FONT_SMP_TDT = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
+FONT_DEBUG = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_mini\debug')
 
 font_cfg = dict(
-    font_dir=CURRENT_DIR / "font" / 'font_mini',
-    font_size=(30, 31),
+    font_dir=FONT_MINI,
+    font_size=(34, 36),
 )
 
 small_font_cfg = dict(
-    font_dir=CURRENT_DIR / "font" / 'font_multi',
+    font_dir=FONT_MINI,
     font_size=(20, 21),
 )
 
@@ -42,12 +71,12 @@ small_font_cfg = dict(
 def base_cfg(name: str):
     return GeneratorCfg(
         num_image=5,
-        save_dir=CURRENT_DIR / "effect_layout_image" / name,
+        save_dir=DST_DIR / "effect_layout_image" / name,
         render_cfg=RenderCfg(
             bg_dir=BG_DIR,
             corpus=EnumCorpus(
                 EnumCorpusCfg(
-                    items=["Hello! 你好！"],
+                    items=["Hello你好"],
                     text_color_cfg=FixedTextColorCfg(),
                     **font_cfg,
                 ),
@@ -58,12 +87,17 @@ def base_cfg(name: str):
 
 def effect_ensemble(items=None):
     # print(inspect.currentframe().f_code.co_name)
-    cfg = base_cfg(inspect.currentframe().f_code.co_name)  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
+    cfg = base_cfg(
+        inspect.currentframe().f_code.co_name + 'author')  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
     cfg.num_image = NUM_IMG
     cfg.render_cfg.gray = False
+    # 2013-2014-商法-学生常用法规掌中宝-6
+    # Hello你好english
+    # Hello你好english规规
+    # 中国地区间财政均等化问题研究
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
-            items=items if items else ['Hello! 【你好】[english]'],
+            items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规
             text_color_cfg=SimpleTextColorCfg(),
             # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
@@ -178,7 +212,7 @@ def color_image(items=None):
     cfg.render_cfg.gray = False
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
-            items=items if items else ['Hello! 【你好】[english]'],
+            items=items if items else ["Hello! 【你好】[english]"],
             text_color_cfg=SimpleTextColorCfg(),
             # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
@@ -247,10 +281,6 @@ def emboss():
     return cfg
 
 
-txt_path = r'E:\lxd\PaddleOCR\StyleText\examples\corpus/corpus_merged_less_25.txt'
-with open(txt_path, mode='r', encoding='utf8') as f:
-    text_list = f.read().split('\n')[:-1]
-
 vertical = True
 
 if vertical:
@@ -265,7 +295,7 @@ if vertical:
         # *line(),
         # perspective_transform(),
         # effect_ensemble(),
-        effect_ensemble(text_list),
+        effect_ensemble(text_list * 5),
         # color_image(text_list),
         # color_image(),
         # dropout_rand(),
@@ -289,7 +319,8 @@ else:
         # *line(),
         # perspective_transform(),
         # color_image(text_list),
-        effect_ensemble(text_list)
+        # effect_ensemble(text_list)
+        effect_ensemble()
         # dropout_rand(),
         # dropout_horizontal(),
         # dropout_vertical(),

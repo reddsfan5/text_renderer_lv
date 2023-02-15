@@ -3,7 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, Union
-
+import re
 from loguru import logger
 from tenacity import retry, stop_after_attempt
 
@@ -67,7 +67,11 @@ class Corpus:
         self.font_manager = FontManager(
             cfg.font_dir, cfg.font_list_file, cfg.font_size,
         )
+        self.punctuation = '[-\s~!@#$%^&*()+_=`:;<>?,./\|\\]+[+——！，。？、~@#￥%……&*（）《》（）&%￥#@！{}【】~·！#￥%=；：’‘“”-]+'
 
+    def remove_punctuation(self, text):
+        str_res = re.sub(self.punctuation, '', text)
+        return str_res
     @retry
     def sample(self):
         """
@@ -78,20 +82,29 @@ class Corpus:
 
         """
         try:
+
             text = self.get_text()
+            # todo 文本标点过滤
+            text = self.remove_punctuation(text)
         except Exception as e:
             logger.exception(e)
             raise RetryError()
-
+        # 最大文本长度控制
         if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
             text = text[: self.cfg.clip_length]
 
         font, support_chars, font_path = self.font_manager.get_font()
         status, intersect = self.font_manager.check_support(text, support_chars)
         if not status:
+
+
             err_msg = (
                 f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
             )
+            # todo lvixaodong font check
+            with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+                f.write(f'{font_path} {text}')
+                f.write('\n')
             logger.debug(err_msg)
             raise RetryError(err_msg)
 
