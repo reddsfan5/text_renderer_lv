@@ -1,5 +1,6 @@
 from typing import Tuple, List
 
+import PIL.Image
 from PIL import Image
 from loguru import logger
 
@@ -8,10 +9,10 @@ import numpy as np
 from PIL.Image import Image as PILImage
 from PIL.ImageFont import FreeTypeFont
 from tenacity import retry
-
+from costum_utils.img_paste import bg_with_pattern,pattern_generator
 from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
-from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img,draw_text_on_bg_hv
+from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv
 from text_renderer.utils import utils
 from text_renderer.utils.errors import PanicError
 from text_renderer.utils.math_utils import PerspectiveTransform
@@ -19,6 +20,7 @@ from text_renderer.utils.bbox import BBox
 from text_renderer.utils.font_text import FontText
 from text_renderer.utils.types import FontColor, is_list
 from text_renderer.utils.draw_utils import Imgerror
+# PNG_BG = r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png'
 
 class Render:
     def __init__(self, cfg: RenderCfg):
@@ -36,7 +38,7 @@ class Render:
                 )
 
         if is_list(self.corpus) and (
-            self.cfg.corpus_effects and not is_list(self.cfg.corpus_effects)
+                self.cfg.corpus_effects and not is_list(self.cfg.corpus_effects)
         ):
             raise PanicError("corpus is list, corpus_effects is not list")
 
@@ -51,7 +53,7 @@ class Render:
             if self._should_apply_layout():
                 img, text, cropped_bg, transformed_text_mask = self.gen_multi_corpus()
             else:
-                img, text, cropped_bg, transformed_text_mask,bbox,font_base = self.gen_single_corpus()
+                img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus()
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -82,32 +84,55 @@ class Render:
                 np_img = np.array(img)
                 np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
                 # np_img = self.norm(np_img)
-            return np_img, text,bbox,font_base
+            return np_img, text, bbox, font_base
 
         except Exception as e:
-            raise Imgerror()
+            raise Imgerror(e)
             # logger.exception(e)
             # raise e
 
     def gen_single_corpus(self) -> Tuple[PILImage, str, PILImage, PILImage]:
         font_text = self.corpus.sample()
 
-        bg = self.bg_manager.get_bg() # 从bg图库中生成文字背景
+        bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
+
+        # 文字大小估计:文本串的边长的最小值，即文字的高。
+        _,_,text_w, text_h = font_text.font.getbbox(font_text.text)
+        # 文字个数估计
+        x_pattern_pad = 15
+        y_pattern_pad = 25
+
+        # text_box = [[text_h - pattern_pad, 5 * text_h - pattern_pad],
+        #             [text_h + text_h + pattern_pad, 5 * text_h - pattern_pad],
+        #             [text_h + text_h + pattern_pad, 5 * text_h + pattern_pad + text_w],
+        #             [text_h - pattern_pad, 5 * text_h + pattern_pad + text_w]]
+
+        text_box = [[2 * text_h - x_pattern_pad,text_h - y_pattern_pad],
+                    [2 * text_h + x_pattern_pad + text_w,text_h - y_pattern_pad],
+                    [2 * text_h + x_pattern_pad + text_w,text_h + text_h + y_pattern_pad],
+                    [2 * text_h - x_pattern_pad,text_h + text_h + y_pattern_pad]]
+        box_xs,box_ys = text_box[0]
+        box_xe,box_ye = text_box[2]
+        gen = pattern_generator(r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png')
+        bg = bg_with_pattern(np.array(bg),gen,text_box)
+        bg = bg[...,:3][...,::-1]
+        pattern_core = bg[box_ys:box_ye, box_xs:box_xe, :]
+        bg = PIL.Image.fromarray(bg)
+
+        pattern_core = PIL.Image.fromarray(pattern_core)
         if self.cfg.text_color_cfg is not None:
-            text_color = self.cfg.text_color_cfg.get_color(bg)
+            text_color = self.cfg.text_color_cfg.get_color(pattern_core)
 
         # corpus text_color has higher priority than RenderCfg.text_color_cfg
         if self.corpus.cfg.text_color_cfg is not None:
-            text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
+            text_color = self.corpus.cfg.text_color_cfg.get_color(pattern_core)
 
         # 书写文本接口,写在透明背景上
 
-        text_mask,bbox,font_base = draw_text_on_bg_hv(
-            font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,save_dir=r'E:\lxd\OCR_project\OCR_SOURCE\font\font_show'
+        text_mask, bbox, font_base = draw_text_on_bg_hv(
+            font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+            save_dir=r'D:\lxd_code\OCR_SOURCE\font\font_show'
         )
-
-
-
 
         if self.cfg.corpus_effects is not None:
             text_mask, _ = self.cfg.corpus_effects.apply_effects(
@@ -133,7 +158,7 @@ class Render:
 
         img, cropped_bg = self.paste_text_mask_on_bg(bg, transformed_text_mask)
 
-        return img, font_text.text, cropped_bg, transformed_text_mask,bbox,font_base
+        return img, font_text.text, cropped_bg, transformed_text_mask, bbox, font_base
 
     def gen_multi_corpus(self) -> Tuple[PILImage, str, PILImage, PILImage]:
         font_texts: List[FontText] = [it.sample() for it in self.corpus]
@@ -201,7 +226,7 @@ class Render:
         return img, merged_text, cropped_bg, transformed_text_mask
 
     def paste_text_mask_on_bg(
-        self, bg: PILImage, transformed_text_mask: PILImage
+            self, bg: PILImage, transformed_text_mask: PILImage
     ) -> Tuple[PILImage, PILImage]:
         """
 
@@ -212,7 +237,9 @@ class Render:
         Returns:
 
         """
-        x_offset, y_offset = utils.random_xy_offset(transformed_text_mask.size, bg.size)
+        # x_offset, y_offset = utils.random_xy_offset(transformed_text_mask.size, bg.size)
+        # 为了控制背景裁切区域，牺牲背景多样性
+        x_offset, y_offset = 0,0
         bg = self.bg_manager.guard_bg_size(bg, transformed_text_mask.size)
         bg = bg.crop(
             (

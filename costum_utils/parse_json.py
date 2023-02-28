@@ -7,7 +7,7 @@ import base64
 import pickle
 import sys
 from collections import defaultdict
-
+from pathlib import Path
 import paddle.device
 from matplotlib import pyplot as plt
 import json
@@ -22,6 +22,19 @@ import numpy as np
 from shutil import copyfile
 from os import path as osp
 import random
+
+
+def get_specific_file_paths(root, suffixs=None):
+    '''
+    递归查找目录下特定后缀的文件，返回Path对象列表
+    '''
+    img_dir_path = Path(root)
+    if suffixs:
+        file_paths = [file_path for file_path in img_dir_path.glob('**/*') if str(file_path).endswith(suffixs)]
+    else:
+        file_paths = [file_path for file_path in img_dir_path.glob('**/*')]
+    return file_paths
+
 
 LABEL_TUPLE = (
     ('指天抬头男', 'A50'),
@@ -78,7 +91,6 @@ LABEL_TUPLE = (
 ch2en = {label[0]: label[1] for label in LABEL_TUPLE}
 en2ch = {label[1]: label[0] for label in LABEL_TUPLE}
 
-
 # class MyEncoder(json.JSONEncoder):
 #     def default(self, obj):
 #         if isinstance(obj, np.ndarray):
@@ -107,7 +119,7 @@ def getJsonDict(json_path):
     :return:json_dict
     '''
     with open(json_path, encoding='utf8', mode='r') as f:
-        s  = f.read()
+        s = f.read()
         # s = s.replace('\\','\\\\') # 防止莫名转义错误
         json_dict = json.loads(s)
     return json_dict
@@ -155,6 +167,7 @@ def orderCalibration(point_list, img_str):
         # 点顺序的检测，基于假设：0，1 点的纵坐标是最小。0点横坐标，小于1点横坐标。
         assert (tem[0][1] in y_list[:2] and tem[1][1] in y_list[:2] and tem[0][0] < tem[1][0]), \
             f'图片：【{img_str}】，索引号为【{i // 4}】的框的点顺序异常,请核实\n{np.array(tem[..., :2]).astype(np.int32)}'
+
 
 def cstPoly4(points_list: List[list]) -> List[List[list]]:
     '''
@@ -310,6 +323,7 @@ def batch_less2out(json_dir, dst_dir):
         dp = os.path.join(dst_dir, jb)
         less2out(jp, dp)
 
+
 def json_name2json_file(json_dir, dst_dir, img_suffix='.jpg'):
     json_file = [file for file in os.listdir(json_dir) if file.endswith('.json')]
     for jf in json_file:
@@ -338,7 +352,6 @@ def json_text2json_label(json_dir, dst_dir):
         with open(os.path.join(dst_dir, jf), mode='w', encoding='utf8') as f:
             data = json.dumps(jd)
             f.write(data)
-
 
 
 def modify_label(json_dict, label_dict):
@@ -590,6 +603,7 @@ def all_to_jpg(second_order_root, dst_root):
             os.mkdir(subdir)
         to_jpg_with_json(img_path, subdir)
 
+
 def modifyJson_bbox_label(json_dict, bboxes, h, w, img_basename, rlt_path=''):
     '''
     根据提供的信息，对json字典完成更新，不需要返回值。
@@ -606,7 +620,7 @@ def modifyJson_bbox_label(json_dict, bboxes, h, w, img_basename, rlt_path=''):
     # assert len(shapes) == len(polygon_list), f'传入标注框数目{len(polygon_list)}与json_dict[shapes]数目{len(shapes)}不匹配'
     # 标注框更新
     for i in range(len(shapes)):
-        json_dict['shapes'][i]['points'] = [bboxes[i][:2],bboxes[i][2:4]]
+        json_dict['shapes'][i]['points'] = [bboxes[i][:2], bboxes[i][2:4]]
         json_dict['shapes'][i]['label'] = bboxes[i][-1]
 
     json_dict['imageData'] = None
@@ -615,7 +629,7 @@ def modifyJson_bbox_label(json_dict, bboxes, h, w, img_basename, rlt_path=''):
     json_dict['imagePath'] = os.path.join(rlt_path, img_basename)  # 相对于json的路径
 
 
-def filter_copy_tree(sencond_order_root, out_dir1,out_dir2):
+def filter_copy_tree(sencond_order_root, out_dir1, out_dir2):
     '''
 
     '''
@@ -624,7 +638,7 @@ def filter_copy_tree(sencond_order_root, out_dir1,out_dir2):
 
     for idx, img_path in tqdm(enumerate(img_paths)):
         json_path = osp.splitext(img_path)[0] + '.json'
-        if len(osp.basename(img_path))<= 2 + 8 + 4:
+        if len(osp.basename(img_path)) <= 2 + 8 + 4:
 
             if not os.path.exists(out_dir1):
                 os.mkdir(out_dir1)
@@ -636,7 +650,7 @@ def filter_copy_tree(sencond_order_root, out_dir1,out_dir2):
 
             shutil.copyfile(img_path, osp.join(sub, osp.basename(img_path)))
             if osp.exists(json_path):
-                shutil.copyfile(json_path,osp.join(sub, osp.basename(json_path)))
+                shutil.copyfile(json_path, osp.join(sub, osp.basename(json_path)))
 
         else:
 
@@ -650,10 +664,11 @@ def filter_copy_tree(sencond_order_root, out_dir1,out_dir2):
 
             shutil.copyfile(img_path, osp.join(sub, osp.basename(img_path)))
             if osp.exists(json_path):
-                shutil.copyfile(json_path,osp.join(sub, osp.basename(json_path)))
+                shutil.copyfile(json_path, osp.join(sub, osp.basename(json_path)))
+
 
 def img_features_to_json(second_order_img_path, core_name='from_video_aug_1000_per_class2',
-                 dst_json_dir=r'E:\lxd\paddleclas_museum_dev\_datasets_\feature_from_infer_2'):
+                         dst_json_dir=r'E:\lxd\paddleclas_museum_dev\_datasets_\feature_from_infer_2'):
     sys.path.append(r'E:\lxd\paddleclas_museum_dev')
     from Random_Forest.rf_cnn_feature import get_recg_predictor
     '''
@@ -662,7 +677,7 @@ def img_features_to_json(second_order_img_path, core_name='from_video_aug_1000_p
     img_paths = get_second_order_img(second_order_img_path)
     jd = defaultdict(list)
     rec_predictor = get_recg_predictor()
-    dst_json_path = osp.join(dst_json_dir,f'cnn_{core_name}_features.json')
+    dst_json_path = osp.join(dst_json_dir, f'cnn_{core_name}_features.json')
     for img_path in tqdm(img_paths):
         img_dict = {}
         img_arr = cv2.imread(img_path)
@@ -675,12 +690,13 @@ def img_features_to_json(second_order_img_path, core_name='from_video_aug_1000_p
         img_dict['source'] = core_name
         jd[label].append(img_dict)
 
-    with open(dst_json_path,mode='w',encoding='utf8') as jf:
+    with open(dst_json_path, mode='w', encoding='utf8') as jf:
         data = json.dumps(jd)
         jf.write(data)
 
+
 def img_features_to_pkl(second_order_img_path, core_name='from_video_aug_1000_per_class',
-                 dst_pkl_dir=r'E:\lxd\paddleclas_museum_dev\_datasets_'):
+                        dst_pkl_dir=r'E:\lxd\paddleclas_museum_dev\_datasets_'):
     sys.path.append(r'E:\lxd\paddleclas_museum_dev')
     from Random_Forest.rf_cnn_feature import get_recg_predictor
     '''
@@ -689,7 +705,7 @@ def img_features_to_pkl(second_order_img_path, core_name='from_video_aug_1000_pe
     img_paths = get_second_order_img(second_order_img_path)
     pd = defaultdict(list)
     rec_predictor = get_recg_predictor()
-    dst_pkl_path = osp.join(dst_pkl_dir,f'cnn_{core_name}_features.pkl')
+    dst_pkl_path = osp.join(dst_pkl_dir, f'cnn_{core_name}_features.pkl')
     for img_path in tqdm(img_paths):
         img_dict = {}
         img_arr = cv2.imread(img_path)
@@ -702,26 +718,25 @@ def img_features_to_pkl(second_order_img_path, core_name='from_video_aug_1000_pe
         img_dict['source'] = core_name
         pd[label].append(img_dict)
 
-    with open(dst_pkl_path,mode='wb') as pf:
-        data = pickle.dump(pd,pf)
+    with open(dst_pkl_path, mode='wb') as pf:
+        data = pickle.dump(pd, pf)
         # pf.write(data)
-def all_to_mum(src,dst):
-    jps = [osp.join(src,jf) for jf in os.listdir(src) if jf.endswith('.json')]
+
+
+def all_to_mum(src, dst):
+    jps = [osp.join(src, jf) for jf in os.listdir(src) if jf.endswith('.json')]
     for jp in jps:
 
         jd = getJsonDict(jp)
         label = ch2en[jd['shapes'][0]['label']]
         if not osp.exists(dst):
             os.mkdir(dst)
-        if not osp.exists(sub:=osp.join(dst,label)):
+        if not osp.exists(sub := osp.join(dst, label)):
             os.mkdir(sub)
         s = base64.b64encode(os.urandom(5)).decode("utf8")
-        s = s.replace("\\", "").replace("/", "").replace("=","").replace("+","")
-        shutil.copy2(jp,osp.join(sub,s+'.json'))
-        shutil.copy2(osp.join(src,jd['imagePath']),osp.join(sub,s+'.jpg'))
-
-
-
+        s = s.replace("\\", "").replace("/", "").replace("=", "").replace("+", "")
+        shutil.copy2(jp, osp.join(sub, s + '.json'))
+        shutil.copy2(osp.join(src, jd['imagePath']), osp.join(sub, s + '.jpg'))
 
 
 if __name__ == '__main__':
@@ -736,7 +751,7 @@ if __name__ == '__main__':
     cuted = r'E:\lxd_dataset\Museum\cut_out_all\cuted_data\from_video_aug_specify_13_14_35'
     sec_dir = r'E:\lxd_dataset\Museum\cut_out_all\cuted_data\from_video_aug_3_ext'
     # getJsonDict(r'D:\dataset\OCR\shujutang_all_0628/')
-    json_text2json_label(r'D:\dataset\OCR\shujutang_all_0628/',r'D:\dataset\OCR\shujutang_json_label_modify')
+    json_text2json_label(r'D:\dataset\OCR\shujutang_all_0628/', r'D:\dataset\OCR\shujutang_json_label_modify')
     # img_features_to_json(img_dir)
     # all_to_mum(json_dir,dst_path)
 
@@ -782,8 +797,6 @@ if __name__ == '__main__':
     #     cor_name = osp.basename(trans_path)
     #     img_features_to_json(trans_path,core_name=cor_name)
     # batch_fill_img(img_dir, json_dir, dst_dir,0)
-
-
 
     # batch_modify_label(r'E:\lxd_dataset\dm8_borrow_1080p_0401_2',r'E:\lxd_dataset\dest_json')
     # batch_modify_label(json_dir,dst_dir)

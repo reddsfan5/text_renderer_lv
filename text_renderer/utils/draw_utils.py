@@ -22,10 +22,11 @@ def need_rotate(char):
     # 1. 数字，英文，闭合标点 不需要旋转。 数字切出来，基本都是非旋转的。
     # 2. 非闭合标点 旋转后最好居中（这个可先不管）
     # 3.中文需要旋转
-    if ord(char)<256 or char in CLOSE_APOSTROPHE:
-        return False
-    else:
-        return True
+    return False
+    # if ord(char)<256 or char in CLOSE_APOSTROPHE:
+    #     return False
+    # else:
+    #     return True
 
 
 def transparent_img(size: Tuple[int, int]) -> PILImage:
@@ -109,14 +110,14 @@ def draw_text_on_bg_hv(
 
     # 长宽估算，生成掩码
     # text_mask = transparent_img((width, height))
-    text_mask = transparent_img((3 * width, 10 * width + height))  # 四周的padding 平均一个height。
+    # x方向两头填充字符数
+    x_pad_chars_num = 4
+    text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
     pre_img = copy.deepcopy(text_mask)
     draw = ImageDraw.Draw(text_mask)
 
-    # c_x = random.randint(0,2*width)
-    # c_y = random.randint(0,2*width)
     x_start = c_x = width
-    y_start = c_y = 5*width
+    y_start = c_y = (x_pad_chars_num//2)*width
     horizontal_content = []
     if font_text.horizontal:
         y_offset = font_text.offset[1]
@@ -170,7 +171,7 @@ def draw_text_on_bg_hv(
         # s = s.replace("\\", "").replace("/", "").replace("=","").replace("+","")
         # box det
 
-
+        # 存储用于字体展示
         text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
 
     # bbox = [[x_start, y_start], [x_start + sum(heights), y_start], [x_start + sum(heights), y_start + max(widths)],

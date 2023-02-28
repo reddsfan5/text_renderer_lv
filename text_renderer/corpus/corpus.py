@@ -85,7 +85,7 @@ class Corpus:
 
             text = self.get_text()
             # todo 文本标点过滤
-            text = self.remove_punctuation(text)
+            # text = self.remove_punctuation(text)
         except Exception as e:
             logger.exception(e)
             raise RetryError()

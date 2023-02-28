@@ -24,9 +24,9 @@ from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 
 '''
 
-with open(r'E:\lxd\OCR_project\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8', mode='r') as chr:
+with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
-txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\corpus\author_bookname/filtered_author_bookname_simple.txt'
+txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
 # txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\font/rare1.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
@@ -34,10 +34,13 @@ with open(txt_path, mode='r', encoding='utf8') as f:
     # 防止空行
     text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
     text_list = [text for text in text_list if text]
+# 小数据集，多倍重复
+text_list *= 10
 
     # list(set(text_list)).sort()
 left = int(0)
-right = left + 900
+# right = 100
+right = len(text_list)
 
 NUM_IMG = len(text_list[left:right])
 # NUM_IMG = 10
@@ -48,18 +51,18 @@ local_time = time.localtime()
 mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
 
 DST_DIR = Path(f'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
-BG_DIR = Path(r'E:\lxd\OCR_project\OCR_SOURCE\bg')
+BG_DIR = Path(r'D:\lxd_code\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
-FONT_SMP = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\简体-简体-低风险')
-FONT_MINI = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_mini')
-FONT_ART = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_art')
-FONT_SMP_TDT = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
-FONT_DEBUG = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_mini\debug')
+FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险\粗体')
+FONT_MINI = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini')
+FONT_ART = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_art')
+FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
+FONT_DEBUG = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini\debug')
 
 font_cfg = dict(
-    font_dir=FONT_MINI,
-    font_size=(34, 36),
+    font_dir=FONT_SMP,
+    font_size=(41, 43),   # 34,36
 )
 
 small_font_cfg = dict(
