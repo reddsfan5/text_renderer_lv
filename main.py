@@ -1,5 +1,6 @@
 import argparse
 import multiprocessing as mp
+from multiprocessing import Value
 import os
 import time
 from multiprocessing.context import Process
@@ -15,6 +16,7 @@ from text_renderer.utils.draw_utils import Imgerror
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
+index = Value('i',0)
 
 # each child process will initialize Render in process_setup 符号 : 为类型建议符；类型注解
 render: Render

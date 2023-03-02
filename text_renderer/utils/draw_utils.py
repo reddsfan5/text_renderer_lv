@@ -134,7 +134,7 @@ def draw_text_on_bg_hv(
             if need_rotate(c):
                 # 卧倒中文书写
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
-                if (np.array(text_mask) == pre_img).all():
+                if c !=' ' and (np.array(text_mask) == pre_img).all():
 
                     print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
                     raise Imgerror()
@@ -150,7 +150,7 @@ def draw_text_on_bg_hv(
         pre_img = np.array(draw2)
         for vt, loc in zip(vertical_text, vertical_location):
             draw2.text(loc, vt, fill=text_color, font=font_text.font)
-            if (np.array(text_mask) == pre_img).all():
+            if vt!=' ' and (np.array(text_mask) == pre_img).all():
                 print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
                 raise Imgerror('字体残缺不齐全')
             else:

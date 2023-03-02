@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 import time
+import random
 from text_renderer.effect import *
 from text_renderer.corpus import *
 from text_renderer.config import (
@@ -24,45 +25,99 @@ from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 
 '''
 
+
+def shorten_item(text_list):
+    # 限制文本长度
+    text_list = [text[:len_limit] for text in text_list if text]
+    # 随机添加空格的文本集
+    text_list_with_space = []
+    for text_item in text_list:
+        if not text_item:
+            continue
+        spaces = []
+        for _ in range(len(text_item) - 1):
+            space_len = random.randint(2, 8)
+            spaces.append(' ' * space_len)
+        cur_item = text_item[0]
+        for space, text_char in zip(spaces, text_item[1:]):
+            cur_item += space
+            cur_item += text_char
+        text_list_with_space.append(cur_item)
+    text_list = text_list_with_space
+    return text_list
+
+
+len_limit = 10
 with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
-txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-# txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\font/rare1.txt'
+# txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
+# txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
+txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_traditional.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
     text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
     # 防止空行
     text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
-    text_list = [text for text in text_list if text]
+
+# text_list = shorten_item(text_list)
+
+# # 限制文本长度
+# text_list = [text[:len_limit] for text in text_list if text]
+# # 随机添加空格的文本集
+# text_list_with_space = []
+# for text_item in text_list:
+#     if not text_item:
+#         continue
+#     spaces = []
+#     for _ in range(len(text_item) - 1):
+#         space_len = random.randint(2, 8)
+#         spaces.append(' ' * space_len)
+#     cur_item = text_item[0]
+#     for space, text_char in zip(spaces, text_item[1:]):
+#         cur_item += space
+#         cur_item += text_char
+#     text_list_with_space.append(cur_item)
+# text_list = text_list_with_space
+
+# 常规文本集
+# text_list = [text for text in text_list if text]
+
 # 小数据集，多倍重复
-text_list *= 10
+# text_list = text_list[:100]
+# text_list *= 10
 
-    # list(set(text_list)).sort()
-left = int(0)
-# right = 100
-right = len(text_list)
+# list(set(text_list)).sort()
 
+# 大间距文字识别记录
+# left = (len(text_list)//10) * 5
+# right = (len(text_list)//10) * 6
+
+left = (len(text_list) // 10) * 0
+# right = (len(text_list) // 10) * 1
+right = 100
 NUM_IMG = len(text_list[left:right])
-# NUM_IMG = 10
+
 print(text_list[left:left + 10])
 print(f'目标图像数目：{NUM_IMG}')
 
 local_time = time.localtime()
 mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
 
-DST_DIR = Path(f'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
+DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
 BG_DIR = Path(r'D:\lxd_code\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
-FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险\粗体')
+FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini')
 FONT_ART = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_art')
 FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
 FONT_DEBUG = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini\debug')
+FONT_TRADITION = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
+FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
 
 font_cfg = dict(
-    font_dir=FONT_SMP,
-    font_size=(41, 43),   # 34,36
+    font_dir=FONT_MINI,
+    font_size=(41, 43),  # 34,36
 )
 
 small_font_cfg = dict(
@@ -94,10 +149,12 @@ def effect_ensemble(items=None):
         inspect.currentframe().f_code.co_name + 'author')  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
     cfg.num_image = NUM_IMG
     cfg.render_cfg.gray = False
+
     # 2013-2014-商法-学生常用法规掌中宝-6
     # Hello你好english
     # Hello你好english规规
     # 中国地区间财政均等化问题研究
+
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
             items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规

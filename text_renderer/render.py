@@ -9,7 +9,7 @@ import numpy as np
 from PIL.Image import Image as PILImage
 from PIL.ImageFont import FreeTypeFont
 from tenacity import retry
-from costum_utils.img_paste import bg_with_pattern,pattern_generator
+from costum_utils.img_paste import bg_with_pattern, pattern_generator
 from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
 from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv
@@ -20,6 +20,8 @@ from text_renderer.utils.bbox import BBox
 from text_renderer.utils.font_text import FontText
 from text_renderer.utils.types import FontColor, is_list
 from text_renderer.utils.draw_utils import Imgerror
+
+
 # PNG_BG = r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png'
 
 class Render:
@@ -91,35 +93,74 @@ class Render:
             # logger.exception(e)
             # raise e
 
-    def gen_single_corpus(self) -> Tuple[PILImage, str, PILImage, PILImage]:
-        font_text = self.corpus.sample()
+    def paste_pattern(self, bg, font_text, pattern_dir=r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png'):
+        '''
 
-        bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
+        Parameters
+        ----------
+        bg::PIL
+        font_text
+        pattern_dir
 
+        Returns :
+            bg:PIL
+            pattern_core:PIL
+        -------
+
+        '''
         # 文字大小估计:文本串的边长的最小值，即文字的高。
-        _,_,text_w, text_h = font_text.font.getbbox(font_text.text)
+        _, _, text_w, text_h = font_text.font.getbbox(font_text.text)
         # 文字个数估计
         x_pattern_pad = 15
         y_pattern_pad = 25
 
-        # text_box = [[text_h - pattern_pad, 5 * text_h - pattern_pad],
-        #             [text_h + text_h + pattern_pad, 5 * text_h - pattern_pad],
-        #             [text_h + text_h + pattern_pad, 5 * text_h + pattern_pad + text_w],
-        #             [text_h - pattern_pad, 5 * text_h + pattern_pad + text_w]]
-
-        text_box = [[2 * text_h - x_pattern_pad,text_h - y_pattern_pad],
-                    [2 * text_h + x_pattern_pad + text_w,text_h - y_pattern_pad],
-                    [2 * text_h + x_pattern_pad + text_w,text_h + text_h + y_pattern_pad],
-                    [2 * text_h - x_pattern_pad,text_h + text_h + y_pattern_pad]]
-        box_xs,box_ys = text_box[0]
-        box_xe,box_ye = text_box[2]
-        gen = pattern_generator(r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png')
-        bg = bg_with_pattern(np.array(bg),gen,text_box)
-        bg = bg[...,:3][...,::-1]
+        text_box = [[2 * text_h - x_pattern_pad, text_h - y_pattern_pad],
+                    [2 * text_h + x_pattern_pad + text_w, text_h - y_pattern_pad],
+                    [2 * text_h + x_pattern_pad + text_w, text_h + text_h + y_pattern_pad],
+                    [2 * text_h - x_pattern_pad, text_h + text_h + y_pattern_pad]]
+        box_xs, box_ys = text_box[0]
+        box_xe, box_ye = text_box[2]
+        gen = pattern_generator(pattern_dir)
+        bg = bg_with_pattern(np.array(bg), gen, text_box)
+        bg = bg[..., :3][..., ::-1]
         pattern_core = bg[box_ys:box_ye, box_xs:box_xe, :]
-        bg = PIL.Image.fromarray(bg)
-
         pattern_core = PIL.Image.fromarray(pattern_core)
+        bg = PIL.Image.fromarray(bg)
+        return bg, pattern_core
+
+    def gen_single_corpus(self,with_pattern=False) -> Tuple[PILImage, str, PILImage, PILImage]:
+        font_text = self.corpus.sample()
+
+        bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
+
+        # # 文字大小估计:文本串的边长的最小值，即文字的高。
+        # _, _, text_w, text_h = font_text.font.getbbox(font_text.text)
+        # # 文字个数估计
+        # x_pattern_pad = 15
+        # y_pattern_pad = 25
+        #
+        # # text_box = [[text_h - pattern_pad, 5 * text_h - pattern_pad],
+        # #             [text_h + text_h + pattern_pad, 5 * text_h - pattern_pad],
+        # #             [text_h + text_h + pattern_pad, 5 * text_h + pattern_pad + text_w],
+        # #             [text_h - pattern_pad, 5 * text_h + pattern_pad + text_w]]
+        #
+        # text_box = [[2 * text_h - x_pattern_pad, text_h - y_pattern_pad],
+        #             [2 * text_h + x_pattern_pad + text_w, text_h - y_pattern_pad],
+        #             [2 * text_h + x_pattern_pad + text_w, text_h + text_h + y_pattern_pad],
+        #             [2 * text_h - x_pattern_pad, text_h + text_h + y_pattern_pad]]
+        # box_xs, box_ys = text_box[0]
+        # box_xe, box_ye = text_box[2]
+        # gen = pattern_generator(r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png')
+        # bg = bg_with_pattern(np.array(bg), gen, text_box)
+        # bg = bg[..., :3][..., ::-1]
+        # pattern_core = bg[box_ys:box_ye, box_xs:box_xe, :]
+        # bg = PIL.Image.fromarray(bg)
+        if with_pattern:
+            bg,pattern_core = self.paste_pattern(bg,font_text)
+        else:
+            pattern_core = bg
+
+
         if self.cfg.text_color_cfg is not None:
             text_color = self.cfg.text_color_cfg.get_color(pattern_core)
 
@@ -239,7 +280,7 @@ class Render:
         """
         # x_offset, y_offset = utils.random_xy_offset(transformed_text_mask.size, bg.size)
         # 为了控制背景裁切区域，牺牲背景多样性
-        x_offset, y_offset = 0,0
+        x_offset, y_offset = 0, 0
         bg = self.bg_manager.guard_bg_size(bg, transformed_text_mask.size)
         bg = bg.crop(
             (
