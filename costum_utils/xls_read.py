@@ -1,7 +1,12 @@
+import json
 import os
-
+from pprint import pprint
+import unicodedata
 import pandas as pd
 from os import path as osp
+import string
+import re
+
 def corpus_txt(corpus_dir, corpus_base,char_limit=100):
     with open(osp.join(corpus_dir, f'{corpus_base}_less_{char_limit}.txt'), mode='a', encoding='utf8') as f:
         '''
@@ -62,17 +67,112 @@ def get_rare_text(not_suport_text,output_path):
         w1.write(core_contents[-1])
 
 
+def read_open_library_file(path, max_line = None, field='title'):
+    '''
+    field:  title(书名),name(作者)
+    Parameters
+    ----------
+    path
+    max_line
+    field
+
+    Returns
+    -------
+
+    '''
+    dir_name,base_name = osp.split(path)
+    stem,ext = osp.splitext(base_name)
+    exclude = set('?=#')
+    with open(path,encoding='utf8') as file,open(osp.join(dir_name,stem+f'_{field}'+'.txt'),mode='w',encoding='utf8') as f2:
+        count = 0
+        # # 移除指定字符
+        for line in file:
+            if max_line and count > max_line:
+                break
+            data = line.strip().split('\t')
+            details = eval(data[4])  # 或者使用 ast.literal_eval() 函数
+            title = details.get(field,None)
+            if not title:
+                continue
+            title = ''.join(char for char in title if char not in exclude)
+            if not contains_foreign(title) and 10<len(title)<100:
+                # print(title)
+                f2.write(title)
+                f2.write('\n')
+            count += 1
+            print(count)
+
+def read_goodreads_file(path, max_line = None, field='original_title'):
+    '''
+    field:  original_title(书名),name(作者)
+    Parameters
+    ----------
+    path
+    max_line
+    field
+
+    Returns
+    -------
+
+    '''
+    dir_name,base_name = osp.split(path)
+    stem,ext = osp.splitext(base_name)
+    exclude = set('?=#')
+    with open(path,encoding='utf8') as file,open(osp.join(dir_name,stem+f'_{field}'+'.txt'),mode='w',encoding='utf8') as f2:
+        count = 0
+        # # 移除指定字符
+        jds = json.load(file)
+
+        for jd in jds:
+            if max_line and count > max_line:
+                break
+  # 或者使用 ast.literal_eval() 函数
+            title = jd.get(field,None)
+            if not title:
+                continue
+            title = ''.join(char for char in title if char not in exclude)
+            if not contains_foreign(title) and 10<len(title)<100:
+                # print(title)
+                f2.write(title)
+                f2.write('\n')
+            count += 1
+            print(count)
 
 
 
+def contains_foreign(text):
+    # 过滤掉标点符号和数字
+    exclude = set(string.punctuation + string.digits)
+    text = ''.join(char for char in text if char not in exclude)
 
+    # 检查文本是否包含非英语字符
+    regex = re.compile('[^a-zA-Z\s]')
+    return bool(regex.search(text))
+
+
+def merge_files(file1, file2, output_file):
+    # 打开两个输入文件和输出文件
+    with open(file1, 'r',encoding='utf8') as f1, open(file2, 'r',encoding='utf8') as f2, open(output_file, 'w',encoding='utf8') as fout:
+        # 逐行读取两个输入文件并写入输出文件
+
+            # 如果每次读取的数据量很大，可以使用缓冲区技术来提高效率
+            # 例如：
+            lines1 = f1.readlines()  # 读取10000个字节的数据
+            lines2 = f2.readlines()  # 读取10000个字节的数据
+            fout.writelines(lines1 + lines2)
 
 if __name__ == '__main__':
-    xls_path = r'E:\lxd_dataset\图书目录/booklibrary_ext.xlsx'
-    df = pd.read_excel(xls_path, header=0)
-    pd.set_option('display.width', None)
-    pd.set_option('display.max_columns', None)
-    print(df.columns.values)
+    file1 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_authors_2023-02-28_name.txt'
+    file2 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_works_2023-02-28_title.txt'
+    file3 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_title_name.txt'
+    merge_files(file1,file2,file3)
+
+
+    # xls_path = r'E:\lxd_dataset\图书目录/booklibrary_ext.xlsx'
+    # df = pd.read_excel(xls_path, header=0)
+    # pd.set_option('display.width', None)
+    # pd.set_option('display.max_columns', None)
+    # print(df.columns.values)
     # corpus_base = rf'bookname_{osp.splitext(osp.basename(xls_path))[0]}'
     # corpus_dir = r'E:\lxd\OCR_project\OCR_SOURCE\corpus__author'
     # img_list_path = r'E:\lxd\PaddleOCR\StyleText\examples/image_list_sel.txt'
@@ -88,4 +188,5 @@ if __name__ == '__main__':
     #
     # # merge_txt(txt_dir,merged_txt_path)
     # txt_filter(r'E:\lxd\OCR_project\OCR_SOURCE\corpus\author_bookname/filtered_author_bookname.txt')
-    get_rare_text(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',r'E:\lxd\OCR_project\OCR_SOURCE\font/rare1.txt')
+    # read_goodreads_file(r'E:\lxd_dataset\图书目录\goodreads_book_authors.json',field='name')
+

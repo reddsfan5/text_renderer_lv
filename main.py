@@ -4,7 +4,6 @@ from multiprocessing import Value
 import os
 import time
 from multiprocessing.context import Process
-
 import cv2
 from loguru import logger
 
@@ -18,7 +17,9 @@ cv2.setNumThreads(1)
 STOP_TOKEN = "kill"
 index = Value('i',0)
 
-# each child process will initialize Render in process_setup 符号 : 为类型建议符；类型注解
+# each child process will initialize Render in process_setup
+# 符号 : 为类型建议符；类型注解,Python的类型提示(type hints)特性，在Python 3.5及以上版本中才支持。
+# 这个特性允许开发者在代码中标注变量、函数、方法等的类型，以提供更好的代码可读性和可维护性。
 render: Render
 
 

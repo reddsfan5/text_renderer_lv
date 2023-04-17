@@ -22,7 +22,6 @@ from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 '''
 1.corpus 文件要用utf8编码格式
 2.各个路径不用字符串，而是Path 对象。
-
 '''
 
 
@@ -36,7 +35,7 @@ def shorten_item(text_list):
             continue
         spaces = []
         for _ in range(len(text_item) - 1):
-            space_len = random.randint(2, 8)
+            space_len = random.randint(0, 8)
             spaces.append(' ' * space_len)
         cur_item = text_item[0]
         for space, text_char in zip(spaces, text_item[1:]):
@@ -52,7 +51,7 @@ with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='ut
     chr_set = set(chr.read().split('\n'))
 # txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
 # txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_traditional.txt'
+txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\book_name_data\sample_book_name.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
     text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
@@ -64,20 +63,20 @@ with open(txt_path, mode='r', encoding='utf8') as f:
 # # 限制文本长度
 # text_list = [text[:len_limit] for text in text_list if text]
 # # 随机添加空格的文本集
-# text_list_with_space = []
-# for text_item in text_list:
-#     if not text_item:
-#         continue
-#     spaces = []
-#     for _ in range(len(text_item) - 1):
-#         space_len = random.randint(2, 8)
-#         spaces.append(' ' * space_len)
-#     cur_item = text_item[0]
-#     for space, text_char in zip(spaces, text_item[1:]):
-#         cur_item += space
-#         cur_item += text_char
-#     text_list_with_space.append(cur_item)
-# text_list = text_list_with_space
+text_list_with_space = []
+for text_item in text_list:
+    if not text_item:
+        continue
+    spaces = []
+    for _ in range(len(text_item) - 1):
+        space_len = random.randint(2, 8)
+        spaces.append(' ' * space_len)
+    cur_item = text_item[0]
+    for space, text_char in zip(spaces, text_item[1:]):
+        cur_item += space
+        cur_item += text_char
+    text_list_with_space.append(cur_item)
+text_list = text_list_with_space
 
 # 常规文本集
 # text_list = [text for text in text_list if text]
@@ -91,10 +90,10 @@ with open(txt_path, mode='r', encoding='utf8') as f:
 # 大间距文字识别记录
 # left = (len(text_list)//10) * 5
 # right = (len(text_list)//10) * 6
-
-left = (len(text_list) // 10) * 0
-# right = (len(text_list) // 10) * 1
-right = 100
+cur_index = 3
+left = (len(text_list) // 4) * cur_index
+right = (len(text_list) // 4) * (cur_index+1)
+# right = 100
 NUM_IMG = len(text_list[left:right])
 
 print(text_list[left:left + 10])
@@ -110,13 +109,13 @@ CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini')
 FONT_ART = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_art')
-FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
+FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险\常规类')
 FONT_DEBUG = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini\debug')
 FONT_TRADITION = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
 FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
 
 font_cfg = dict(
-    font_dir=FONT_MINI,
+    font_dir=FONT_SMP_TDT,
     font_size=(41, 43),  # 34,36
 )
 

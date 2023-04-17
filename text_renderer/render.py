@@ -133,28 +133,6 @@ class Render:
 
         bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
 
-        # # 文字大小估计:文本串的边长的最小值，即文字的高。
-        # _, _, text_w, text_h = font_text.font.getbbox(font_text.text)
-        # # 文字个数估计
-        # x_pattern_pad = 15
-        # y_pattern_pad = 25
-        #
-        # # text_box = [[text_h - pattern_pad, 5 * text_h - pattern_pad],
-        # #             [text_h + text_h + pattern_pad, 5 * text_h - pattern_pad],
-        # #             [text_h + text_h + pattern_pad, 5 * text_h + pattern_pad + text_w],
-        # #             [text_h - pattern_pad, 5 * text_h + pattern_pad + text_w]]
-        #
-        # text_box = [[2 * text_h - x_pattern_pad, text_h - y_pattern_pad],
-        #             [2 * text_h + x_pattern_pad + text_w, text_h - y_pattern_pad],
-        #             [2 * text_h + x_pattern_pad + text_w, text_h + text_h + y_pattern_pad],
-        #             [2 * text_h - x_pattern_pad, text_h + text_h + y_pattern_pad]]
-        # box_xs, box_ys = text_box[0]
-        # box_xe, box_ye = text_box[2]
-        # gen = pattern_generator(r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png')
-        # bg = bg_with_pattern(np.array(bg), gen, text_box)
-        # bg = bg[..., :3][..., ::-1]
-        # pattern_core = bg[box_ys:box_ye, box_xs:box_xe, :]
-        # bg = PIL.Image.fromarray(bg)
         if with_pattern:
             bg,pattern_core = self.paste_pattern(bg,font_text)
         else:

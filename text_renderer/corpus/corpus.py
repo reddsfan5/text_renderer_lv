@@ -64,10 +64,11 @@ class Corpus:
         self, cfg: "CorpusCfg",
     ):
         self.cfg = cfg
+        self.cur_corpus = ''
         self.font_manager = FontManager(
             cfg.font_dir, cfg.font_list_file, cfg.font_size,
         )
-        self.punctuation = '[-\s~!@#$%^&*()+_=`:;<>?,./\|\\]+[+——！，。？、~@#￥%……&*（）《》（）&%￥#@！{}【】~·！#￥%=；：’‘“”-]+'
+        self.punctuation = r'[-~!@#$%^&*()+_=`:;<>?,./|\]+[+——！，。？、~@#￥%……&*（）《》（）&%￥#@！{}【】~·！#￥%=；：’‘“”-]+'
 
     def remove_punctuation(self, text):
         str_res = re.sub(self.punctuation, '', text)
