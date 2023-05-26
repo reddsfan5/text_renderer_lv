@@ -90,7 +90,7 @@ text_list = text_list_with_space
 # 大间距文字识别记录
 # left = (len(text_list)//10) * 5
 # right = (len(text_list)//10) * 6
-part = 6
+part = 60
 cur_index = 5
 left = (len(text_list) // part) * cur_index
 right = (len(text_list) // part) * (cur_index+1)

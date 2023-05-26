@@ -154,8 +154,9 @@ class LmdbDataset(Dataset):
 
     def __init__(self, data_dir: str):
         super().__init__(data_dir)
-        self._lmdb_env = lmdb.open(self.data_dir, map_size=20e9)  # 40G
+        self._lmdb_env = lmdb.open(self.data_dir, map_size=10*1024*1024)  # 100M
         self._lmdb_txn = self._lmdb_env.begin(write=True)
+        self.increment = 300*1024*1024 # 300M
 
     # def write_backup(self, name: str, image: np.ndarray, label: str,bbox=None):
     #     self._lmdb_txn.put(
@@ -185,8 +186,14 @@ class LmdbDataset(Dataset):
         ])
         imgp, trans = bbox_tuple
         trans[0]['image'] = img_byte
+        try :
+            self._lmdb_txn.put(img_base.encode(), json.dumps(trans[0]).encode('utf8'))
+        except lmdb.MapFullError:
+            # 重新打开数据库并扩大 map_size
+            self._lmdb_env = lmdb.open(self.data_dir, map_size=lmdb.open(self.data_dir).info()['map_size'] + self.increment)
+            self._lmdb_txn = self._lmdb_env.begin(write=True)
+            self._lmdb_txn.put(img_base.encode(), json.dumps(trans[0]).encode('utf8'))
 
-        self._lmdb_txn.put(img_base.encode(), json.dumps(trans[0]).encode('utf8'))
 
     def read(self, name: str) -> Dict:
         label = self._lmdb_txn.get(self.label_key(name)).decode()
