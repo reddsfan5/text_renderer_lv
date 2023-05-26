@@ -46,12 +46,12 @@ def shorten_item(text_list):
     return text_list
 
 
-len_limit = 10
-with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_8k.txt', encoding='utf8', mode='r') as chr:
+len_limit = 20
+with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
 # txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
 # txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\book_name_data\sample_book_name.txt'
+txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\book_name_data\syn_book_name.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
     text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
@@ -90,15 +90,16 @@ text_list = text_list_with_space
 # 大间距文字识别记录
 # left = (len(text_list)//10) * 5
 # right = (len(text_list)//10) * 6
-cur_index = 3
-left = (len(text_list) // 4) * cur_index
-right = (len(text_list) // 4) * (cur_index+1)
+part = 6
+cur_index = 5
+left = (len(text_list) // part) * cur_index
+right = (len(text_list) // part) * (cur_index+1)
 # right = 100
 NUM_IMG = len(text_list[left:right])
 
 print(text_list[left:left + 10])
 print(f'目标图像数目：{NUM_IMG}')
-
+text_list = text_list[left:right]
 local_time = time.localtime()
 mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
 
@@ -109,7 +110,7 @@ CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini')
 FONT_ART = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_art')
-FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险\常规类')
+FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险\字库齐全')
 FONT_DEBUG = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini\debug')
 FONT_TRADITION = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
 FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
@@ -354,7 +355,7 @@ if vertical:
         # *line(),
         # perspective_transform(),
         # effect_ensemble(),
-        effect_ensemble(text_list * 5),
+        effect_ensemble(text_list * 2),
         # color_image(text_list),
         # color_image(),
         # dropout_rand(),
