@@ -1,10 +1,21 @@
 # coding:utf-8
+import base64
+import math
 import os
+from collections import Counter
+from io import BytesIO
+
+import PIL
 import cv2
 import json
+
+import yaml
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from tqdm import tqdm
+from lmdb_loader import LMDBLoader
+
+
 
 
 class Visualize(object):
@@ -42,7 +53,7 @@ class Visualize(object):
         for i in range(len(pnts)):
             pt0 = pnts[i]
             pt1 = pnts[(i+1) % len(pnts)]
-            cv2.line(dst, (pt0[0], pt0[1]), (pt1[0], pt1[1]), color=color, thickness=thickness, lineType=linetype)
+            cv2.line(dst, (int(pt0[0]), int(pt0[1])), (int(pt1[0]), int(pt1[1])), color=color, thickness=thickness, lineType=linetype)
         return dst
 
     def draw_bbox(self, img, bbox, color):
@@ -131,7 +142,7 @@ class Visualize(object):
         # if not DISPLAY_DBG_INFO and file_name is None:
         #     return 0
         image = data['image'] if isinstance(data, dict) else data
-        image = self.convert_image_to_display(image)
+        image = self.convert_image_to_display(image).copy()
         if isinstance(data, dict):
             for k, v in data.items():
                 if 'points' == k:
@@ -143,7 +154,9 @@ class Visualize(object):
                 else:
                     image = self.display_type_key(image, k, v)
         file_name, rand_idx = self.get_file_name(rand_idx, ext, file_name)
-        cv2.imwrite(file_name, image)
+        # cv2.imwrite(file_name, image)
+
+        cv2.imencode('.jpg',image)[1].tofile(file_name)
         return rand_idx
 
     def draw_elements(self, image, elements, cr=(255, 0, 0)):
@@ -218,35 +231,48 @@ def analysis_jpg_loss():
 
 
     return save2
-
-if __name__ == '__main__':
-    from lmdb_loader import LMDBLoader
-
-    #analysis_jpg_loss()
-    lmdb_path = r'D:\dataset\OCR\lmdb_datatest_052618_083330_99996\effect_layout_image\effect_ensembleauthor'
-    label_file = rf'D:\dataset\OCR\book_name_data\{os.path.basename(lmdb_path)}_label_show.txt'
-    lmdb_loader = LMDBLoader( lmdb_path, rand=False)#, gen_labels=True)
+def visualization_some_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1'):
+    from lmdbs.lmdbs.convert_compressed_file import cut_to_pieces
+    from lmdbs.lmdbs.lmdb_saver import LmdbSaver
+    lmdb_loader = LMDBLoader(lmdb_path, rand=True)#, gen_labels=True)
+    print(f'样本量：{lmdb_loader.num_samples}')
     dst_path = lmdb_path + '/samples/'
     vis = Visualize()
     if not os.path.exists(dst_path):
         os.mkdir(dst_path)
-    sp_text = '蒹'
-    show_num = 30
-    with open(label_file,mode='w',encoding='utf8') as f:
-
-        for i in tqdm(range(lmdb_loader.num_samples)):
-            # i = np.random.randint(1, lmdb_loader.num_samples)
-            data = lmdb_loader.__getitem__(i)
-            if data is None or data['image'] is None:
-                continue
-            # if i<show_num:
-            if sp_text in data['transcription']:
-                vis.display_infor(data, file_name=dst_path+str(i) + '_infor.jpg')
-            f.write(f"{data['transcription']}\n")
+    for j in range(30):
+        i = j # np.random.randint(0, lmdb_loader.num_samples)
+        data = lmdb_loader.__getitem__(i)
+        if data is None or data['image'] is None:
+            continue
+        vis.display_infor(data, file_name=dst_path+str(i) + '_infor.jpg')
 
 
 
-    #lmdb_loader.get_labels(text_only=False)
+def show_sp_data(lmdb_path:str,id = 86064):
+    lmdb_loader = LMDBLoader(lmdb_path, rand=False)#, gen_labels=True)
+    val = lmdb_loader.txn.get(('id-' + str(id).zfill(9)).encode()).decode('utf8')
+    print(val)
+    img_b64 = json.loads(val)['image']
+    with BytesIO() as bio:
+        bio.write(base64.b64decode(img_b64))
+        pil_img = PIL.Image.open(bio)
+        from matplotlib import pyplot as plt
+        plt.imshow(np.array(pil_img))
+        plt.show()
+
+
+if __name__ == '__main__':
+    visualization_some_sample(r'F:\D\dataset\OCR\need_multi_core_rec\liuzhou\test\single\ch\95_more_letter\letter_ch_lmdb')
+    # # analysis_jpg_loss()
+    # cvt_data()
+    # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')
+    # li = [str(i).zfill(6) for i in range(10**6)]
+    # print(li[:10])
+
+
+
+
 
 
 

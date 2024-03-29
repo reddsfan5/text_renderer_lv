@@ -1,11 +1,11 @@
 import argparse
+import cv2
 import multiprocessing as mp
-from multiprocessing import Value
 import os
 import time
-from multiprocessing.context import Process
-import cv2
 from loguru import logger
+from multiprocessing import Value
+from multiprocessing.context import Process
 
 from text_renderer.config import get_cfg, GeneratorCfg
 from text_renderer.dataset import LmdbDataset, ImgDataset
@@ -15,7 +15,7 @@ from text_renderer.utils.draw_utils import Imgerror
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
-index = Value('i',0)
+index = Value('i', 0)
 
 # each child process will initialize Render in process_setup
 # 符号 : 为类型建议符；类型注解,Python的类型提示(type hints)特性，在Python 3.5及以上版本中才支持。
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     mp.set_start_method("spawn", force=True)
     manager = mp.Manager()
-     # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
+    # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
     # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
     data_queue = manager.Queue()
 

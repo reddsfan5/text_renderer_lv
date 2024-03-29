@@ -47,11 +47,13 @@ def shorten_item(text_list):
 
 
 len_limit = 20
-with open(r'D:\lxd_code\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
+# 支持的字符集，用于过滤超纲字符
+with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
-# txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
-# txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-txt_path = r'D:\lxd_code\OCR_SOURCE\corpus\book_name_data\syn_book_name.txt'
+# 所有可选的书名、作者名列表。
+txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
+# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\digit_str/digit_text.txt'
+# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
     text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
@@ -90,11 +92,11 @@ text_list = text_list_with_space
 # 大间距文字识别记录
 # left = (len(text_list)//10) * 5
 # right = (len(text_list)//10) * 6
-part = 60
-cur_index = 5
+part = 5
+cur_index = 0
 left = (len(text_list) // part) * cur_index
-right = (len(text_list) // part) * (cur_index+1)
-# right = 100
+# right = (len(text_list) // part) * (cur_index+1)
+right = 100
 NUM_IMG = len(text_list[left:right])
 
 print(text_list[left:left + 10])
@@ -104,19 +106,20 @@ local_time = time.localtime()
 mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
 
 DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
-BG_DIR = Path(r'D:\lxd_code\OCR_SOURCE\bg')
+BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
-FONT_SMP = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简体-简体-低风险')
-FONT_MINI = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini')
-FONT_ART = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_art')
-FONT_SMP_TDT = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险\字库齐全')
-FONT_DEBUG = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\font_mini\debug')
-FONT_TRADITION = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
-FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
+FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
+FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
+FONT_ART = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_art')
+FONT_SMP_TDT = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低风险\字库齐全')
+FONT_DEBUG = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini\debug')
+FONT_TRADITION = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
+FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
+FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性存在风险字体\已更新')
 
 font_cfg = dict(
-    font_dir=FONT_SMP_TDT,
+    font_dir=FONT_HARD,
     font_size=(41, 43),  # 34,36
 )
 

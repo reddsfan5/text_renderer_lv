@@ -7,7 +7,7 @@ from os import path as osp
 import string
 import re
 
-def corpus_txt(corpus_dir, corpus_base,char_limit=100):
+def corpus_txt(df,corpus_dir, corpus_base,char_limit=100):
     with open(osp.join(corpus_dir, f'{corpus_base}_less_{char_limit}.txt'), mode='a', encoding='utf8') as f:
         '''
         图书目录:书名,出版社,作者
@@ -25,21 +25,8 @@ def corpus_txt(corpus_dir, corpus_base,char_limit=100):
                 continue
             f.write(f"{df[item].get(index)}\n")
 
-def image_list_txt(txt_path,bg_dir):
-    rel_names = [osp.join(osp.basename(bg_dir),base) for base in os.listdir(bg_dir)]
-    with open(txt_path,encoding='utf8',mode='w') as f:
-        for index,rel_name in enumerate(rel_names):
-            f.write(f"{rel_name}\t{index}\n")
 
-def merge_txt(txt_dir,dst_txt_path):
-    with open(dst_txt_path,mode='a',encoding='utf8') as merge_file:
-        txt_paths = [osp.join(txt_dir,tp) for tp in os.listdir(txt_dir)]
-        print(txt_paths)
-        for txt_path in txt_paths:
-            print(txt_path)
-            with open(txt_path,mode='r',encoding='utf8') as f:
-                content = f.read().strip()
-                merge_file.write(content)
+
 
 def txt_filter(dst_path,text_path=r'E:\lxd\OCR_project\OCR_SOURCE\corpus\merged/author_bookname_all.txt',filter_path=r'E:\lxd\OCR_project\OCR_SOURCE\corpus/chn_charset_dict_8k.txt'):
     with open(filter_path, encoding='utf8', mode='r') as chr:
@@ -150,37 +137,46 @@ def contains_foreign(text):
     return bool(regex.search(text))
 
 
+
+
+def merge_txt(txt_dir,dst_txt_path):
+    with open(dst_txt_path,mode='a',encoding='utf8') as merge_file:
+        txt_paths = [osp.join(txt_dir,tp) for tp in os.listdir(txt_dir)]
+        print(txt_paths)
+        for txt_path in txt_paths:
+            print(txt_path)
+            with open(txt_path,mode='r',encoding='utf8') as f:
+                content = f.read().strip()
+                merge_file.write(content)
+
 def merge_files(file1, file2, output_file):
     # 打开两个输入文件和输出文件
     with open(file1, 'r',encoding='utf8') as f1, open(file2, 'r',encoding='utf8') as f2, open(output_file, 'w',encoding='utf8') as fout:
         # 逐行读取两个输入文件并写入输出文件
-
-            # 如果每次读取的数据量很大，可以使用缓冲区技术来提高效率
-            # 例如：
-            lines1 = f1.readlines()  # 读取10000个字节的数据
-            lines2 = f2.readlines()  # 读取10000个字节的数据
-            fout.writelines(lines1 + lines2)
+        lines1 = f1.readlines()
+        lines2 = f2.readlines()
+        fout.writelines(lines1 + lines2)
 
 if __name__ == '__main__':
-    file1 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_authors_2023-02-28_name.txt'
-    file2 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_works_2023-02-28_title.txt'
-    file3 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_title_name.txt'
-    merge_files(file1,file2,file3)
+    # file1 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_authors_2023-02-28_name.txt'
+    # file2 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_works_2023-02-28_title.txt'
+    # file3 = r'E:\lxd_dataset\图书目录\Open_Library_ol_dump_title_name.txt'
+    # merge_files(file1,file2,file3)
 
 
-    # xls_path = r'E:\lxd_dataset\图书目录/booklibrary_ext.xlsx'
-    # df = pd.read_excel(xls_path, header=0)
-    # pd.set_option('display.width', None)
-    # pd.set_option('display.max_columns', None)
-    # print(df.columns.values)
-    # corpus_base = rf'bookname_{osp.splitext(osp.basename(xls_path))[0]}'
-    # corpus_dir = r'E:\lxd\OCR_project\OCR_SOURCE\corpus__author'
+    xls_path = r'E:\lxd_dataset\图书目录/booklibrary_ext.xlsx'
+    df = pd.read_excel(xls_path, header=0)
+    pd.set_option('display.width', None)
+    pd.set_option('display.max_columns', None)
+    print(df.columns.values)
+    corpus_base = rf'bookname_{osp.splitext(osp.basename(xls_path))[0]}'
+    corpus_dir = r'E:\lxd\OCR_project\OCR_SOURCE\corpus__author'
     # img_list_path = r'E:\lxd\PaddleOCR\StyleText\examples/image_list_sel.txt'
     # bg_dir = r'E:\lxd\PaddleOCR\StyleText\examples\style_images_selected'
     # txt_dir = r'E:\lxd\OCR_project\OCR_SOURCE\corpus\merged'
     # merged_txt_path = r'E:\lxd\OCR_project\OCR_SOURCE\corpus\author\author_bookname_all.txt'
     # dst_path = r''
-    # # corpus_txt(corpus_dir,corpus_base)
+    corpus_txt(df,corpus_dir,corpus_base)
     #
     # # 列名展示 主要列名：[书名，作者，出版社]
     #

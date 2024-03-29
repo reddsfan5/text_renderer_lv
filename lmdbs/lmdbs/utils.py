@@ -1,4 +1,6 @@
 import io
+
+import cv2
 from PIL import Image
 import copy
 import yaml
@@ -12,6 +14,8 @@ def b64encode_img(image):
     image.save(f, format="JPEG")
     imgbin = f.getvalue()
     # img_b64_str = base64.encodebytes(imgbin).decode("utf-8").replace("\n", "")
+    b64_str = base64.b64encode(imgbin)
+    # print(b64_str[:20])
     img_b64_str = base64.b64encode(imgbin).decode('utf-8')
     return img_b64_str
 
@@ -124,3 +128,8 @@ class ClsLabelOperator(object):
 
     def get_class_num(self):
         return len(self.character)
+if __name__ == '__main__':
+    img_arr = cv2.imread(r'D:\dataset\layer_board_det\2_on_shelf\qinghua_easy\qinghua_69_on_shelf_0_192.168.2.34_0.jpg')
+    img_str = b64encode_img(img_arr)
+    print(img_str[:20])
+

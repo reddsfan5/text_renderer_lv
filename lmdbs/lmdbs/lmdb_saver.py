@@ -1,5 +1,7 @@
 # coding:utf-8
 import os
+from pathlib import Path
+
 import lmdb
 import cv2
 import json
@@ -8,6 +10,8 @@ from multiprocessing import Lock
 import numpy as np
 import traceback
 __package__ = 'lmdbs.lmdbs'
+
+from costum_utils.parse_json import getJsonDict
 from .utils import b64encode_img, b64decode_img
 from .visualize import Visualize
 
@@ -34,7 +38,7 @@ class LmdbSaverBase(object):
             print("Open lmdb {}".format(lmdb_path))
         else:
             print("Create lmdb {}".format(lmdb_path))
-        return lmdb.open(lmdb_path, map_size=100 * 1024 * 1024)
+        return lmdb.open(lmdb_path, map_size=1 * 1024 * 1024)
 
     def add_map_size(self, adder_size=200 * 1024 * 1024):
         self.lock.acquire()
@@ -261,4 +265,34 @@ class LmdbSaver(LmdbSaverBase):
 
 
 if __name__ == '__main__':
-    LmdbSaver()
+
+
+    count = 0
+    json_root = r'F:\D\dataset\OCR\need_multi_core_rec\20240208_media_hushi_cuted\rec_piece\20240208_on_shelf_hushi'
+    dst_path = json_root + '_test_lmdb'
+    lmdb_saver = LmdbSaver({'lmdb_path': dst_path, 'cnt': 0, 'cache_capacity': 5})
+    for img_path in list(Path(json_root).glob('**/*.jpg'))[:500]:
+
+        json_path = img_path.with_suffix('.json')
+        jd = getJsonDict(str(json_path))
+        img_arr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), 1)
+        img_base = f'id-{count:09}'  # img_path.name
+        print(img_base)
+        label = jd['shapes'][0]['label']
+        points = jd['shapes'][0]['points']
+        points = np.array(points, np.int32).tolist()
+        scores = jd['shapes'][0]['scores']
+        img_byte = b64encode_img(img_arr)
+        h, w = img_arr.shape[:2]
+        bbox_tuple = (f'{img_base}', [
+            {
+                "transcription": f'{label}',
+                "illegibility": False,
+                "points": points,
+                "scores":scores
+            }
+        ])
+        imgp, trans = bbox_tuple
+        trans[0]['image'] = img_arr
+        count += 1
+        lmdb_saver.add({img_base:bbox_tuple[1][0]}, is_to_json=False)
