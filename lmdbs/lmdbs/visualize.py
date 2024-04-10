@@ -231,7 +231,7 @@ def analysis_jpg_loss():
 
 
     return save2
-def visualization_some_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1'):
+def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1'):
     from lmdbs.lmdbs.convert_compressed_file import cut_to_pieces
     from lmdbs.lmdbs.lmdb_saver import LmdbSaver
     lmdb_loader = LMDBLoader(lmdb_path, rand=True)#, gen_labels=True)
@@ -263,7 +263,7 @@ def show_sp_data(lmdb_path:str,id = 86064):
 
 
 if __name__ == '__main__':
-    visualization_some_sample(r'F:\D\dataset\OCR\need_multi_core_rec\liuzhou\test\single\ch\95_more_letter\letter_ch_lmdb')
+    visualize_esome_sample(r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_rotated_lmdb')
     # # analysis_jpg_loss()
     # cvt_data()
     # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')

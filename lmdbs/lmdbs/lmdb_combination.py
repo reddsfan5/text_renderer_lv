@@ -14,7 +14,7 @@ def parse_args() -> object:
     parser.add_argument(
         '--lmdb_dir',
         type=str,
-        default=r'D:\dataset\OCR\lmdb_0506',
+        default=r'D:\dataset\OCR\ocr_rec_art_font_150W',
         help='path of source sub-lmdb directory')
 
     args = parser.parse_args()

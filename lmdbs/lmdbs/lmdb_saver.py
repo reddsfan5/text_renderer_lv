@@ -5,7 +5,6 @@ from pathlib import Path
 import lmdb
 import cv2
 import json
-from multiprocessing.context import Process
 from multiprocessing import Lock
 import numpy as np
 import traceback

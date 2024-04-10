@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict
 from abc import abstractmethod
 from costum_utils.parse_json import getJsonDict
-from lmdbs.lmdbs.utils import b64encode_img, b64decode_img
+from lmdbs.lmdbs.utils import b64encode_img
 import lmdb
 import cv2
 import numpy as np

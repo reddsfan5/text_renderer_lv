@@ -1,4 +1,7 @@
 import argparse
+import sys
+import traceback
+
 import cv2
 import multiprocessing as mp
 import os
@@ -11,7 +14,7 @@ from text_renderer.config import get_cfg, GeneratorCfg
 from text_renderer.dataset import LmdbDataset, ImgDataset
 from text_renderer.render import Render
 from text_renderer.utils.draw_utils import Imgerror
-
+sys.path.append(r'D:\lxd_code\lv_tools')
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
@@ -45,7 +48,7 @@ class DBWriterProcess(Process):
             with self.dataset_cls(str(save_dir)) as db:
                 exist_count = db.read_count()
                 count = 0
-                logger.info(f"Exist image count in {save_dir}: {exist_count}")
+                logger.info(f"Exist image count in {save_dir}: 【{exist_count}】")
                 start = time.time()
                 while True:
                     m = self.data_queue.get()
@@ -71,9 +74,12 @@ class DBWriterProcess(Process):
 
 def generate_img(data_queue):
     try:
+        print('aaa')
         data = render()
     except Imgerror:
         data = None
+        traceback.print_exc()
+
     if data is not None:
         data_queue.put({"image": data[0], "label": data[1], "bbox": data[2], 'font': data[3]})
 

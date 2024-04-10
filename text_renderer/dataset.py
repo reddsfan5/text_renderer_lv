@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import pstats
 import statistics
+import traceback
 from abc import abstractmethod
 from multiprocessing import Lock, Queue
 from pathlib import Path
@@ -310,7 +311,7 @@ def filter_file_by_criteria(min_letter_num: int, label: str,
 
 
 def filter_by_language(language: Literal['ch', 'en'], label):
-    return language == 'ch' and filter_file_by_criteria(min_letter_num=3, label=label, filter_strs=(
+    return language == 'ch' and filter_file_by_criteria(min_letter_num=1, label=label, filter_strs=(
         '出版', '版社')) or language == 'en' and filter_file_by_criteria(min_letter_num=4, label=label)
 
 
@@ -321,7 +322,7 @@ def gen_ocr_rec_lmdb_from_pieces(language: Literal['ch', 'en'],
     lmdb_dir = json_root + f'_lmdb'
     if not os.path.exists(lmdb_dir):
         os.mkdir(lmdb_dir)
-    with LmdbDataset(lmdb_dir, map_size=2000 * 1024 * 1024) as writer:
+    with LmdbDataset(lmdb_dir, map_size=100 * 1024 * 1024) as writer:
         count = 0
         total = 0
         for _ in Path(json_root).glob('**/*.jpg'):
@@ -330,6 +331,8 @@ def gen_ocr_rec_lmdb_from_pieces(language: Literal['ch', 'en'],
         for img_path in tqdm(Path(json_root).glob('**/*.jpg'), total=total, desc='lmdb生成中：'):
 
             json_path = img_path.with_suffix('.json')
+            if not os.path.exists(str(json_path)):
+                continue
             jd = getJsonDict(str(json_path))
             try:
                 if not jd.get('shapes', None):
@@ -348,10 +351,14 @@ def gen_ocr_rec_lmdb_from_pieces(language: Literal['ch', 'en'],
 
                     # 逐个写入影响效率，使用了 缓存 + 批量写入 的逻辑 ,预处理时间有点长，写到进程池，加速
                     # s2 = time.time()
-                    writer.write(img_base, img_arr, label, bbox=points, scores=jd['shapes'][0]['scores'])
-                    # print(f'写入时间：{time.time() - s2}')
+                    if jd['shapes'][0].get('scores'):
+                        writer.write(img_base, img_arr, label, bbox=points, scores=jd['shapes'][0]['scores'])
+                    else:
+                        writer.write(img_base, img_arr, label, bbox=points)
+         # print(f'写入时间：{time.time() - s2}')
             except:
                 print('出错文件：', json_path)
+                traceback.print_exc()
             # writer.write(img_base, img_arr, label, bbox=points)
         writer.write_count(count)
         print(writer.read_count())
@@ -469,6 +476,7 @@ def rec_data_producer(queue: Queue, language: Literal['ch', 'en'], img_path: Pat
             # print(f'写入时间：{time.time() - s2}')
     except:
         print('出错文件：', json_path)
+        traceback.print_exc()
 
 
 def multi_producer(queue: Queue, lock: Lock, language: Literal['ch', 'en'], img_paths: List[Path]):
@@ -497,11 +505,12 @@ def multi_producer(queue: Queue, lock: Lock, language: Literal['ch', 'en'], img_
                 # print(f'写入时间：{time.time() - s2}')
         except:
             print('出错文件：', json_path)
+            traceback.print_exc()
 
 
 def rec_data_consumer(queue: Queue, lmdb_dir):
     count = 0
-    with LmdbDataset(lmdb_dir, map_size=2000 * 1024 * 1024) as writer:
+    with LmdbDataset(lmdb_dir, map_size=200 * 1024 * 1024) as writer:
         pbar = tqdm()
         while True:
             data = queue.get()
@@ -547,16 +556,16 @@ def main_async(language: Literal['ch', 'en'], json_root: str, max_workers: int =
 
 
 if __name__ == "__main__":
-    root = r'F:\D\dataset\OCR\need_multi_core_rec\liuzhou\test\single\ch\95_more_letter\letter_ch'
+    root = r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_calibrated_liu_li_lv_rotated_increment'
 
-    lmdb_dir = r'F:\D\dataset\OCR\need_multi_core_rec\20240208_media_zhongshan_cuted\rec_piece\20240208_media_zhongshan\20240208_on_shelf_rec_zhongshan_ch_25K_lmdb'
+    lmdb_dir = r'F:\D\dataset\OCR\need_multi_core_rec\hushi_hard_data_rotated_rec_lmdb'
 
-    # cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
-    cProfile.run("main_async('ch',root)",sort='cumtime',filename='main_async_time_analysis.prof')
+    cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
+    # cProfile.run("main_async('ch',root)",sort='cumtime',filename='main_async_time_analysis.prof')
     # main_async('ch',root)
 
-    p = pstats.Stats('main_async_time_analysis.prof')
-    p.sort_stats('time').print_stats()
+    # p = pstats.Stats('main_async_time_analysis.prof')
+    # p.sort_stats('time').print_stats()
 
     # filter_lmdb(lmdb_path=lmdb_dir,language='ch')
     # lmdb_key_normalize(lmdb_dir, 'ch')

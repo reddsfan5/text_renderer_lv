@@ -13,7 +13,6 @@ from costum_utils.img_paste import bg_with_pattern, pattern_generator
 from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
 from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv
-from text_renderer.utils import utils
 from text_renderer.utils.errors import PanicError
 from text_renderer.utils.math_utils import PerspectiveTransform
 from text_renderer.utils.bbox import BBox
@@ -150,7 +149,7 @@ class Render:
 
         text_mask, bbox, font_base = draw_text_on_bg_hv(
             font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-            save_dir=r'D:\lxd_code\OCR_SOURCE\font\font_show'
+            save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
         )
 
         if self.cfg.corpus_effects is not None:

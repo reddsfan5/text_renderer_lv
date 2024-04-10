@@ -2,11 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-import numpy as np
-from loguru import logger
 from text_renderer.utils.errors import PanicError
-from text_renderer.utils.utils import random_choice
-
 from .corpus import Corpus, CorpusCfg
 
 
@@ -75,8 +71,8 @@ class EnumCorpus(Corpus):
                     self.cfg.filter_font_min_support_chars
                 )
 
-    def get_text(self):
-        #todo lvxiaodong
+    def get_text(self) -> str:
+        # todo lvxiaodong
         if not self.texts:
             with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus\chn_charset_dict_8k.txt', encoding='utf8',
                       mode='r') as chr:

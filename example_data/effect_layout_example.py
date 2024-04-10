@@ -1,21 +1,22 @@
 import inspect
 import os
-from dataclasses import dataclass
-from pathlib import Path
-import numpy as np
-import time
 import random
-from text_renderer.effect import *
-from text_renderer.corpus import *
+import sys
+import time
+from pathlib import Path
+if (lv_tools:=r'D:\lxd_code\lv_tools') not in sys.path:
+    sys.path.append(lv_tools)
+from task_ocr_text_render.digit_str_gen import number_to_text,number_to_text_with_parenthesis
+from costum_utils.text_segmentation import limit_text_and_add_space
 from text_renderer.config import (
     RenderCfg,
-    NormPerspectiveTransformCfg,
     GeneratorCfg,
     SimpleTextColorCfg,
-    TextColorCfg,
     FixedTextColorCfg,
     FixedPerspectiveTransformCfg,
 )
+from text_renderer.corpus import *
+from text_renderer.effect import *
 from text_renderer.effect.curve import Curve
 from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
 
@@ -35,15 +36,14 @@ def shorten_item(text_list):
             continue
         spaces = []
         for _ in range(len(text_item) - 1):
-            space_len = random.randint(0, 8)
+            space_len = random.randint(0, 6)
             spaces.append(' ' * space_len)
         cur_item = text_item[0]
         for space, text_char in zip(spaces, text_item[1:]):
             cur_item += space
             cur_item += text_char
         text_list_with_space.append(cur_item)
-    text_list = text_list_with_space
-    return text_list
+    return text_list_with_space
 
 
 len_limit = 20
@@ -51,34 +51,16 @@ len_limit = 20
 with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
 # 所有可选的书名、作者名列表。
-txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
+# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
 # txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
+txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
 with open(txt_path, mode='r', encoding='utf8') as f:
     # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
     text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
     # 防止空行
     text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
 
-# text_list = shorten_item(text_list)
-
-# # 限制文本长度
-# text_list = [text[:len_limit] for text in text_list if text]
-# # 随机添加空格的文本集
-text_list_with_space = []
-for text_item in text_list:
-    if not text_item:
-        continue
-    spaces = []
-    for _ in range(len(text_item) - 1):
-        space_len = random.randint(2, 8)
-        spaces.append(' ' * space_len)
-    cur_item = text_item[0]
-    for space, text_char in zip(spaces, text_item[1:]):
-        cur_item += space
-        cur_item += text_char
-    text_list_with_space.append(cur_item)
-text_list = text_list_with_space
+text_list = limit_text_and_add_space(text_list)
 
 # 常规文本集
 # text_list = [text for text in text_list if text]
@@ -92,11 +74,10 @@ text_list = text_list_with_space
 # 大间距文字识别记录
 # left = (len(text_list)//10) * 5
 # right = (len(text_list)//10) * 6
-part = 5
+part = 4
 cur_index = 0
 left = (len(text_list) // part) * cur_index
-# right = (len(text_list) // part) * (cur_index+1)
-right = 100
+right = (len(text_list) // part) * (cur_index + 1)
 NUM_IMG = len(text_list[left:right])
 
 print(text_list[left:left + 10])
@@ -116,7 +97,7 @@ FONT_SMP_TDT = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低
 FONT_DEBUG = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini\debug')
 FONT_TRADITION = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
 FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
-FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性存在风险字体\已更新')
+FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
 
 font_cfg = dict(
     font_dir=FONT_HARD,
