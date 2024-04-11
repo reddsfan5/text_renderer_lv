@@ -4,9 +4,7 @@ import random
 import sys
 import time
 from pathlib import Path
-if (lv_tools:=r'D:\lxd_code\lv_tools') not in sys.path:
-    sys.path.append(lv_tools)
-from task_ocr_text_render.digit_str_gen import number_to_text,number_to_text_with_parenthesis
+from lv_tools.task_ocr_text_render.digit_str_gen import number_to_text,number_to_text_with_parenthesis
 from costum_utils.text_segmentation import limit_text_and_add_space
 from text_renderer.config import (
     RenderCfg,
@@ -44,7 +42,11 @@ def shorten_item(text_list):
             cur_item += text_char
         text_list_with_space.append(cur_item)
     return text_list_with_space
-
+# 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
+'''
+目前想到的优化方案是：
+1. 文本处理，
+'''
 
 len_limit = 20
 # 支持的字符集，用于过滤超纲字符
