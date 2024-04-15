@@ -1,10 +1,9 @@
 import inspect
 import os
 import random
-import sys
 import time
 from pathlib import Path
-from lv_tools.task_ocr_text_render.digit_str_gen import number_to_text,number_to_text_with_parenthesis
+
 from costum_utils.text_segmentation import limit_text_and_add_space
 from text_renderer.config import (
     RenderCfg,
@@ -42,74 +41,6 @@ def shorten_item(text_list):
             cur_item += text_char
         text_list_with_space.append(cur_item)
     return text_list_with_space
-# 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
-'''
-目前想到的优化方案是：
-1. 文本处理，
-'''
-
-len_limit = 20
-# 支持的字符集，用于过滤超纲字符
-with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
-    chr_set = set(chr.read().split('\n'))
-# 所有可选的书名、作者名列表。
-# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
-# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\digit_str/digit_text.txt'
-txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
-with open(txt_path, mode='r', encoding='utf8') as f:
-    # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
-    text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
-    # 防止空行
-    text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
-
-text_list = limit_text_and_add_space(text_list)
-
-# 常规文本集
-# text_list = [text for text in text_list if text]
-
-# 小数据集，多倍重复
-# text_list = text_list[:100]
-# text_list *= 10
-
-# list(set(text_list)).sort()
-
-# 大间距文字识别记录
-# left = (len(text_list)//10) * 5
-# right = (len(text_list)//10) * 6
-part = 4
-cur_index = 0
-left = (len(text_list) // part) * cur_index
-right = (len(text_list) // part) * (cur_index + 1)
-NUM_IMG = len(text_list[left:right])
-
-print(text_list[left:left + 10])
-print(f'目标图像数目：{NUM_IMG}')
-text_list = text_list[left:right]
-local_time = time.localtime()
-mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
-
-DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
-BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
-CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
-
-FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
-FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
-FONT_ART = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_art')
-FONT_SMP_TDT = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低风险\字库齐全')
-FONT_DEBUG = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini\debug')
-FONT_TRADITION = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\繁体-繁体-低风险')
-FONT_SIM_TRAD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简繁-简繁-低风险')
-FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
-
-font_cfg = dict(
-    font_dir=FONT_HARD,
-    font_size=(41, 43),  # 34,36
-)
-
-small_font_cfg = dict(
-    font_dir=FONT_MINI,
-    font_size=(20, 21),
-)
 
 
 def base_cfg(name: str):
@@ -135,11 +66,6 @@ def effect_ensemble(items=None):
         inspect.currentframe().f_code.co_name + 'author')  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
     cfg.num_image = NUM_IMG
     cfg.render_cfg.gray = False
-
-    # 2013-2014-商法-学生常用法规掌中宝-6
-    # Hello你好english
-    # Hello你好english规规
-    # 中国地区间财政均等化问题研究
 
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
@@ -326,6 +252,58 @@ def emboss():
     )
     return cfg
 
+
+
+# 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
+'''
+目前想到的优化方案是：
+1. 文本处理，
+'''
+
+len_limit = 20
+# 支持的字符集，用于过滤超纲字符
+with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
+    chr_set = set(chr.read().split('\n'))
+# 所有可选的书名、作者名列表。
+# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
+txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
+with open(txt_path, mode='r', encoding='utf8') as f:
+    # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
+    text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
+    # 防止空行
+    text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
+
+text_list = limit_text_and_add_space(text_list)
+
+part = 4
+cur_index = 0
+left = (len(text_list) // part) * cur_index
+right = (len(text_list) // part) * (cur_index + 1)
+NUM_IMG = len(text_list[left:right])
+
+print(text_list[left:left + 10])
+print(f'目标图像数目：{NUM_IMG}')
+text_list = text_list[left:right]
+local_time = time.localtime()
+mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
+
+DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
+BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
+CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
+
+FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
+FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
+FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
+
+font_cfg = dict(
+    font_dir=FONT_HARD,
+    font_size=(41, 43),  # 34,36
+)
+
+small_font_cfg = dict(
+    font_dir=FONT_MINI,
+    font_size=(20, 21),
+)
 
 vertical = True
 

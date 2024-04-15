@@ -27,11 +27,11 @@ class Render:
     def __init__(self, cfg: RenderCfg):
         self.cfg = cfg
         self.layout = cfg.layout
-        if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1:
-            self.corpus = cfg.corpus[0]
-        else:
-            self.corpus = cfg.corpus
+        self.corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
+        self._corpus_check()
+        self.bg_manager = BgManager(cfg.bg_dir, cfg.pre_load_bg_img)
 
+    def _corpus_check(self):
         if is_list(self.corpus) and is_list(self.cfg.corpus_effects):
             if len(self.corpus) != len(self.cfg.corpus_effects):
                 raise PanicError(
@@ -46,7 +46,6 @@ class Render:
         if not is_list(self.corpus) and is_list(self.cfg.corpus_effects):
             raise PanicError("corpus_effects is list, corpus is not list")
 
-        self.bg_manager = BgManager(cfg.bg_dir, cfg.pre_load_bg_img)
 
     @retry
     def __call__(self, *args, **kwargs) -> Tuple[np.ndarray, str]:

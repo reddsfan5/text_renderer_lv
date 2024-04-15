@@ -1,3 +1,5 @@
+import typing
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
@@ -71,22 +73,32 @@ class EnumCorpus(Corpus):
                     self.cfg.filter_font_min_support_chars
                 )
 
+    def random_sample_text(self,
+                           chn_charset_path: str = r'chn_charset_dict_8k.txt',
+                           text_file_path: str = r'text_100.txt'
+                           ) -> typing.Generator:
+        if not self.texts:
+            with open(chn_charset_path, encoding='utf8',mode='r') as chr:
+                chr_set = set(chr.read().split('\n'))
+            with open(text_file_path, mode='r', encoding='utf8') as f:
+                for line in f:
+                    text = line.split('\n')
+                    if not text:
+                        continue
+                    # 防止空行
+                    text = ''.join(list(filter(lambda x: x in chr_set, text)))
+                    yield text
+
     def get_text(self) -> str:
         # todo lvxiaodong
         if not self.texts:
-            with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus\chn_charset_dict_8k.txt', encoding='utf8',
-                      mode='r') as chr:
-                chr_set = set(chr.read().split('\n'))
-            txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname.txt'
-            with open(txt_path, mode='r', encoding='utf8') as f:
-                # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
-                text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
-                # 防止空行
-                text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
-                text_list = [text for text in text_list if text]
-            self.texts = text_list
+            self.texts = self.random_sample_text()
         # 文本遍历模式
-        text = self.texts.pop()
+        if isinstance(self.texts, list):
+            text = self.texts.pop()
+        elif isinstance(self.texts, Iterable):
+            text = next(self.texts)
+
         # todo watch text info
         # print(text)
         # text = random_choice(self.texts, self.cfg.num_pick)

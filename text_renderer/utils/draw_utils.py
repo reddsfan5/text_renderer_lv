@@ -3,16 +3,16 @@ import os
 import random
 from os import path as osp
 from typing import Tuple, Union
-import sys
 import numpy as np
 from PIL import ImageDraw, Image
 from PIL.Image import Image as PILImage
 
 from costum_utils.text_segmentation import limit_text_and_add_space
+from lv_tools.task_ocr_text_render.series_text import series_text_gen
 from text_renderer.utils.font_text import FontText
-if (lv_tools:=r'D:\lxd_code\lv_tools') not in sys.path:
-    sys.path.append(lv_tools)
-from task_ocr_text_render.digit_str_gen import number_to_text,number_to_text_with_parenthesis
+from lv_tools.task_ocr_text_render.digit_str_gen import DigitGenerator
+dg = DigitGenerator()
+
 CLOSE_APOSTROPHE = {'【', '】', '（', '）', '《', '》', '“', '”', '〔', '〕', '〈', '〉', '「', '」', '『', '』', '〖',
                     '〗'}  # ord大于256的闭合标点， '{', '}'不分全角半角，其ord小于256。
 
@@ -586,24 +586,22 @@ if __name__ == '__main__':
     
     '''
 
-    print(number_to_text_with_parenthesis(5))
+    from PIL import Image, ImageDraw, ImageFont
 
+    # create an image
+    out = Image.new("RGB", (500, 500), (255, 255, 255))
 
-    # from PIL import Image, ImageDraw, ImageFont
-    #
-    # # create an image
-    # out = Image.new("RGB", (500, 500), (255, 255, 255))
-    #
-    # # get a font
-    # fnt = ImageFont.truetype(r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 40)
-    # # get a drawing context
-    # d = ImageDraw.Draw(out)
+    # get a font
+    fnt = ImageFont.truetype(r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 40)
+    # get a drawing context
+    d = ImageDraw.Draw(out)
     #
     # # draw multiline text
-    # bbox = d.multiline_textbbox((100, 100), "你\n的\n名\n\n\n字\n26563", font=fnt)
-    # d.rectangle(bbox, outline=(0, 0, 255, 255))
-    # print(bbox)
-    # d.multiline_text((100, 100), "你\n的\n名\n\n\n字\n26563", font=fnt, fill=(0, 0, 0))
-    # out.show()
+    cur_text,text_label = next(series_text_gen())
+    bbox = d.multiline_textbbox((100, 100), cur_text, font=fnt)
+    d.rectangle(bbox, outline=(0, 0, 255, 255))
+    print(bbox)
+    d.multiline_text((100, 100), cur_text, font=fnt, fill=(0, 0, 0))
+    out.show()
 
-    # draw_multiline_text_centered("path_to_your_image.jpg", "你\n的\n名\n\n\n字\n26563", r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 20)
+    # draw_multiline_text_centered("path_to_your_image.jpg", cur_text, r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 20)
