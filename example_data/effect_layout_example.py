@@ -1,10 +1,13 @@
 import inspect
+import itertools
 import os
 import random
 import time
 from pathlib import Path
 
 from costum_utils.text_segmentation import limit_text_and_add_space
+from lv_tools.task_ocr_text_render.series_text import (
+    series_text_gen)
 from text_renderer.config import (
     RenderCfg,
     GeneratorCfg,
@@ -13,6 +16,7 @@ from text_renderer.config import (
     FixedPerspectiveTransformCfg,
 )
 from text_renderer.corpus import *
+from text_renderer.corpus.multi_line_corpus import MultiLineCorpus, MultiLineCorpusCfg
 from text_renderer.effect import *
 from text_renderer.effect.curve import Curve
 from text_renderer.layout import SameLineLayout, ExtraTextLineLayout
@@ -78,6 +82,26 @@ def effect_ensemble(items=None):
     # cfg.render_cfg.perspective_transform = FixedPerspectiveTransformCfg(30, 30, 1.5)
     # cfg.render_cfg.corpus.cfg.horizontal = False
     return cfg
+
+def multi_line_text(items=None):
+    # print(inspect.currentframe().f_code.co_name)
+    cfg = base_cfg(
+        inspect.currentframe().f_code.co_name + 'author')  # inspect.currentframe().f_code.co_name 返回所在函数的字符串形式的函数名
+    cfg.num_image = NUM_IMG
+    cfg.render_cfg.gray = False
+
+    cfg.render_cfg.corpus = [MultiLineCorpus(
+        MultiLineCorpusCfg(
+            items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规
+            text_color_cfg=SimpleTextColorCfg(),
+            # text_color_cfg=FixedTextColorCfg(),
+            **font_cfg,
+        ),
+    ), ]
+    # cfg.render_cfg.perspective_transform = FixedPerspectiveTransformCfg(30, 30, 1.5)
+    # cfg.render_cfg.corpus.cfg.horizontal = False
+    return cfg
+
 
 
 def dropout_rand():
@@ -252,7 +276,30 @@ def emboss():
     )
     return cfg
 
+def text_list_gen(txt_path):
 
+    with open(txt_path, mode='r', encoding='utf8') as f:
+        # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
+        text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
+        # 防止空行
+        text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
+
+    text_list = limit_text_and_add_space(text_list)
+    return text_list
+
+def data_split_start_end(text_list,part=4,cur_index=0):
+    left = (len(text_list) // part) * cur_index
+    right = (len(text_list) // part) * (cur_index + 1)
+
+    print(text_list[left:left + 10])
+
+    return left,right
+
+
+
+FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
+FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
+FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
 
 # 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
 '''
@@ -260,43 +307,29 @@ def emboss():
 1. 文本处理，
 '''
 
-len_limit = 20
+len_limit = 200
 # 支持的字符集，用于过滤超纲字符
 with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
 # 所有可选的书名、作者名列表。
-# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\filtered_author_bookname_simple.txt'
-txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt'
-with open(txt_path, mode='r', encoding='utf8') as f:
-    # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
-    text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
-    # 防止空行
-    text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
 
-text_list = limit_text_and_add_space(text_list)
 
-part = 4
-cur_index = 0
-left = (len(text_list) // part) * cur_index
-right = (len(text_list) // part) * (cur_index + 1)
-NUM_IMG = len(text_list[left:right])
+# text_list = text_list_gen(txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt')
+# start,end = data_split_start_end(text_list)
+# text_list = text_list[start:end]
+NUM_IMG = 10**5
+text_list = series_text_gen(data_num=NUM_IMG)
 
-print(text_list[left:left + 10])
-print(f'目标图像数目：{NUM_IMG}')
-text_list = text_list[left:right]
 local_time = time.localtime()
-mon, day, hour = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour
-
-DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{left:06}_{right}')
+mon, day, hour,minite,sec = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour,local_time.tm_min,local_time.tm_sec
+DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{minite:02}_{sec:02}')
 BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
-FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
-FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
-FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
+
 
 font_cfg = dict(
-    font_dir=FONT_HARD,
+    font_dir=FONT_SMP,
     font_size=(41, 43),  # 34,36
 )
 
@@ -319,7 +352,8 @@ if vertical:
         # *line(),
         # perspective_transform(),
         # effect_ensemble(),
-        effect_ensemble(text_list * 2),
+        # effect_ensemble(text_list*2),
+        multi_line_text(text_list*2)
         # color_image(text_list),
         # color_image(),
         # dropout_rand(),
@@ -344,7 +378,8 @@ else:
         # perspective_transform(),
         # color_image(text_list),
         # effect_ensemble(text_list)
-        effect_ensemble()
+        # effect_ensemble()
+        multi_line_text()
         # dropout_rand(),
         # dropout_horizontal(),
         # dropout_vertical(),

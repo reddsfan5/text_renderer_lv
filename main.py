@@ -71,7 +71,7 @@ class DBWriterProcess(Process):
 
 def generate_img(data_queue):
     try:
-        print('多进程断点处')
+        # print('多进程断点处')
         data = render()
     except Imgerror:
         data = None

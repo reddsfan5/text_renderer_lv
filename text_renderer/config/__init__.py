@@ -1,4 +1,5 @@
 import importlib
+import traceback
 from importlib.util import spec_from_file_location
 import os
 import random
@@ -286,7 +287,7 @@ def import_module_from_file(full_path_to_module):
     except Exception as ec:
         # Simple error printing
         # Insert "sophisticated" stuff here
-        print(ec)
+        traceback.print_exc()
 
     finally:
         return module

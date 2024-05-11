@@ -493,7 +493,8 @@ def multi_producer(queue: Queue, lock: Lock, language: Literal['ch', 'en'], img_
                 return
             label = jd['shapes'][0]['label']
             points = jd['shapes'][0]['points']
-            if filter_by_language(language, label):
+            # if filter_by_language(language, label):
+            if True:
                 # s = time.time()
                 img_arr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), 1)
                 points = np.array(points, np.int32).tolist()
@@ -501,7 +502,9 @@ def multi_producer(queue: Queue, lock: Lock, language: Literal['ch', 'en'], img_
                 # 逐个写入影响效率，使用了 缓存 + 批量写入 的逻辑 ,预处理时间有点长，写到进程池，加速
                 # s2 = time.time()
 
-                queue.put({'image': img_arr, 'label': label, 'bbox': points, 'scores': jd['shapes'][0]['scores'],'file':img_path.name})
+                scores = jd['shapes'][0].get('scores',1)
+
+                queue.put({'image': img_arr, 'label': label, 'bbox': points, 'scores': scores,'file':img_path.name})
                 # print(f'写入时间：{time.time() - s2}')
         except:
             print('出错文件：', json_path)
@@ -556,12 +559,12 @@ def main_async(language: Literal['ch', 'en'], json_root: str, max_workers: int =
 
 
 if __name__ == "__main__":
-    root = r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_increament\hard_data_calibrated_liu_li_lv_rotated_increment'
+    root = r'F:\dataset\OCR\3.text_rec\0_hard_data_increament\2_hard_data_rotated_increment'
 
     lmdb_dir = r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_increament\hard_data_calibrated_liu_li_lv_rotated_increment_lmdb'
 
-    cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
-    # cProfile.run("main_async('ch',root)",sort='cumtime',filename='main_async_time_analysis.prof')
+    # cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
+    main_async('ch',root)
     # main_async('ch',root)
 
     # p = pstats.Stats('main_async_time_analysis.prof')

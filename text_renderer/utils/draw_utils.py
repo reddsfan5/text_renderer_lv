@@ -8,7 +8,7 @@ from PIL import ImageDraw, Image
 from PIL.Image import Image as PILImage
 
 from costum_utils.text_segmentation import limit_text_and_add_space
-from lv_tools.task_ocr_text_render.series_text import series_text_gen
+from lv_tools.task_ocr_text_render.series_text import series_text_gen, one_line_text_2_multi_line_text
 from text_renderer.utils.font_text import FontText
 from lv_tools.task_ocr_text_render.digit_str_gen import DigitGenerator
 dg = DigitGenerator()
@@ -186,7 +186,7 @@ def draw_text_on_bg_hv(
 
 
 
-def draw_text_on_bg_with_digit_in_one_line(
+def draw_text_on_bg_multi_line(
         font_text: FontText,
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
         char_spacing: Union[float, Tuple[float, float]] = -1,
@@ -214,12 +214,7 @@ def draw_text_on_bg_with_digit_in_one_line(
     char_spacings = []
 
     ori_text = font_text.text
-    text_with_space = limit_text_and_add_space(ori_text)
-
-
-
-
-
+    multi_line = one_line_text_2_multi_line_text(ori_text)
     cs_height = font_text.size[1]
     for i in range(len(font_text.text)):
         if isinstance(char_spacing, list) or isinstance(char_spacing, tuple):
@@ -228,57 +223,18 @@ def draw_text_on_bg_with_digit_in_one_line(
         else:
             char_spacings.append(int(char_spacing * cs_height))
 
+    # 计算文本尺寸
+    bbox = ImageDraw.Draw(Image.new('RGB', (1, 1))).multiline_textbbox((0, 0), multi_line, font=font_text.font)
+    width, height = bbox[2] - bbox[0], bbox[3] - bbox[0]
+    margin = min(width, height)  # 文本周围留白的像素
 
-    # 长宽估算，生成掩码
-    # text_mask = transparent_img((width, height))
-    # x方向两头填充字符数
-    x_pad_chars_num = 4
 
-
-    text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
-    pre_img = copy.deepcopy(text_mask)
+    text_mask = transparent_img((width + 2 * margin, height + 2 * margin))
+    # 四周的padding 平均一个height。
+    # pre_img = copy.deepcopy(text_mask)
     draw = ImageDraw.Draw(text_mask)
-
-    x_start = c_x = width
-    y_start = c_y = (x_pad_chars_num // 2) * width
-    horizontal_content = []
-    if font_text.horizontal:
-        y_offset = font_text.offset[1]
-        for i, c in enumerate(font_text.text):
-            draw.text((c_x, c_y - y_offset), c, fill=text_color, font=font_text.font)
-
-            c_x += chars_size[i][0] + char_spacings[i]
-    else:
-        x_offset = font_text.offset[0]
-        # 纵横书写，预留位置。实现中英文 书脊名字的排列形式。
-        vertical_location = []
-        vertical_text = []
-        for i, c in enumerate(font_text.text):
-            if need_rotate(c):
-                # 卧倒中文书写
-                draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
-                if c != ' ' and (np.array(text_mask) == pre_img).all():
-
-                    print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
-                    raise Imgerror()
-                else:
-                    pre_img = np.array(text_mask)
-            else:
-                vertical_location.append((c_y, text_mask.width - (c_x - x_offset + widths[i])))
-                vertical_text.append(c)
-
-            c_y += chars_size[i][1] + char_spacings[i]
-        text_mask = text_mask.rotate(90, expand=True)
-        draw2 = ImageDraw.Draw(text_mask)
-        pre_img = np.array(draw2)
-        for vt, loc in zip(vertical_text, vertical_location):
-            draw2.text(loc, vt, fill=text_color, font=font_text.font)
-            if vt != ' ' and (np.array(text_mask) == pre_img).all():
-                print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
-                raise Imgerror('字体残缺不齐全')
-            else:
-                pre_img = np.array(text_mask)
-
+    draw.multiline_text((margin, margin), multi_line, font=font_text.font, fill=text_color)
+    text_mask = text_mask.rotate(90, expand=True)
     pre_img = np.array(text_mask)[..., :3]
     points = np.argwhere(pre_img < 255)
     xmin = np.min(points[:, 1])
@@ -597,11 +553,11 @@ if __name__ == '__main__':
     d = ImageDraw.Draw(out)
     #
     # # draw multiline text
-    cur_text,text_label = next(series_text_gen())
-    bbox = d.multiline_textbbox((100, 100), cur_text, font=fnt)
-    d.rectangle(bbox, outline=(0, 0, 255, 255))
-    print(bbox)
-    d.multiline_text((100, 100), cur_text, font=fnt, fill=(0, 0, 0))
-    out.show()
+    for cur_text in series_text_gen(10):
+        bbox = d.multiline_textbbox((100, 100), cur_text, font=fnt)
+        d.rectangle(bbox, outline=(0, 0, 255, 255))
+        print(bbox)
+        d.multiline_text((100, 100), cur_text, font=fnt, fill=(0, 0, 0))
+        out.show()
 
     # draw_multiline_text_centered("path_to_your_image.jpg", cur_text, r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 20)

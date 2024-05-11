@@ -9,7 +9,7 @@ from .corpus import Corpus, CorpusCfg
 
 
 @dataclass
-class EnumCorpusCfg(CorpusCfg):
+class MultiLineCorpusCfg(CorpusCfg):
     """
     Enum corpus config
 
@@ -37,7 +37,7 @@ class EnumCorpusCfg(CorpusCfg):
     join_str: str = ""
 
 
-class EnumCorpus(Corpus):
+class MultiLineCorpus(Corpus):
     """
     Randomly select items from the list
     """
@@ -45,7 +45,7 @@ class EnumCorpus(Corpus):
     def __init__(self, cfg: "CorpusCfg"):
         super().__init__(cfg)
 
-        self.cfg: EnumCorpusCfg
+        self.cfg: MultiLineCorpusCfg
         if len(self.cfg.text_paths) == 0 and len(self.cfg.items) == 0:
             raise PanicError(f"text_paths or items must not be empty")
 
