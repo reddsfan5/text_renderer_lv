@@ -231,7 +231,7 @@ def analysis_jpg_loss():
 
 
     return save2
-def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1'):
+def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1',num=100):
     from lmdbs.lmdbs.convert_compressed_file import cut_to_pieces
     from lmdbs.lmdbs.lmdb_saver import LmdbSaver
     lmdb_loader = LMDBLoader(lmdb_path, rand=True)#, gen_labels=True)
@@ -240,7 +240,7 @@ def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_c
     vis = Visualize()
     if not os.path.exists(dst_path):
         os.mkdir(dst_path)
-    for j in range(30):
+    for j in range(num):
         i = j # np.random.randint(0, lmdb_loader.num_samples)
         data = lmdb_loader.__getitem__(i)
         if data is None or data['image'] is None:
@@ -263,7 +263,7 @@ def show_sp_data(lmdb_path:str,id = 86064):
 
 
 if __name__ == '__main__':
-    visualize_esome_sample(r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_rotated_lmdb')
+    visualize_esome_sample(r'D:\dataset\OCR\lmdb_datatest_121120_58_48\effect_layout_image\effect_ensembleauthor')
     # # analysis_jpg_loss()
     # cvt_data()
     # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')

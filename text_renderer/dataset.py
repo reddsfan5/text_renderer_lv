@@ -15,7 +15,7 @@ import lmdb
 import numpy as np
 from tqdm import tqdm
 
-from costum_utils.parse_json import getJsonDict
+from lv_tools.cores.json_io import load_json_to_dict
 from lmdbs.lmdbs.utils import b64encode_img
 
 
@@ -333,7 +333,7 @@ def gen_ocr_rec_lmdb_from_pieces(language: Literal['ch', 'en'],
             json_path = img_path.with_suffix('.json')
             if not os.path.exists(str(json_path)):
                 continue
-            jd = getJsonDict(str(json_path))
+            jd = load_json_to_dict(str(json_path))
             try:
                 if not jd.get('shapes', None):
                     continue
@@ -458,7 +458,7 @@ def lmdb_key_normalize(lmdb_path: str, language: Literal['ch', 'en'], cache: int
 
 def rec_data_producer(queue: Queue, language: Literal['ch', 'en'], img_path: Path):
     json_path = img_path.with_suffix('.json')
-    jd = getJsonDict(str(json_path))
+    jd = load_json_to_dict(str(json_path))
     try:
         if not jd.get('shapes', None):
             return
@@ -487,7 +487,7 @@ def multi_producer(queue: Queue, lock: Lock, language: Literal['ch', 'en'], img_
             else:
                 break
         json_path = img_path.with_suffix('.json')
-        jd = getJsonDict(str(json_path))
+        jd = load_json_to_dict(str(json_path))
         try:
             if not jd.get('shapes', None):
                 return
@@ -563,8 +563,10 @@ if __name__ == "__main__":
 
     lmdb_dir = r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_increament\hard_data_calibrated_liu_li_lv_rotated_increment_lmdb'
 
-    # cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
-    main_async('ch',root)
+
+
+    cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
+    # main_async('ch',root)
     # main_async('ch',root)
 
     # p = pstats.Stats('main_async_time_analysis.prof')
@@ -585,7 +587,7 @@ if __name__ == "__main__":
     # json_root = r'F:\D\dataset\OCR\need_multi_core_rec\sources_hulu_book_55k\rec_piece\rotated\80_rotated_more_letter\4_letter_ch'
     # for img_path in list(Path(json_root).glob('**/*.jpg')):
     #     json_path = img_path.with_suffix('.json')
-    #     jd = getJsonDict(str(json_path))
+    #     jd = load_json_to_dict(str(json_path))
     #     label = jd['shapes'][0]['label']
     #     points = jd['shapes'][0]['points']
     #     print(label)

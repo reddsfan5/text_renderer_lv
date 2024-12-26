@@ -11,7 +11,7 @@ from lv_tools.task_ocr_text_render.series_text import (
 from text_renderer.config import (
     RenderCfg,
     GeneratorCfg,
-    SimpleTextColorCfg,
+    SafeTextColorCfg,
     FixedTextColorCfg,
     FixedPerspectiveTransformCfg,
 )
@@ -74,7 +74,7 @@ def effect_ensemble(items=None):
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
             items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规
-            text_color_cfg=SimpleTextColorCfg(),
+            text_color_cfg=SafeTextColorCfg(),
             # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
         ),
@@ -93,7 +93,7 @@ def multi_line_text(items=None):
     cfg.render_cfg.corpus = [MultiLineCorpus(
         MultiLineCorpusCfg(
             items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规
-            text_color_cfg=SimpleTextColorCfg(),
+            text_color_cfg=SafeTextColorCfg(),
             # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
         ),
@@ -209,7 +209,7 @@ def color_image(items=None):
     cfg.render_cfg.corpus = [EnumCorpus(
         EnumCorpusCfg(
             items=items if items else ["Hello! 【你好】[english]"],
-            text_color_cfg=SimpleTextColorCfg(),
+            text_color_cfg=SafeTextColorCfg(),
             # text_color_cfg=FixedTextColorCfg(),
             **font_cfg,
         ),
@@ -276,7 +276,7 @@ def emboss():
     )
     return cfg
 
-def text_list_gen(txt_path):
+def text_list_gen(txt_path,is_add_space=True):
 
     with open(txt_path, mode='r', encoding='utf8') as f:
         # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
@@ -284,7 +284,7 @@ def text_list_gen(txt_path):
         # 防止空行
         text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
 
-    text_list = limit_text_and_add_space(text_list)
+    text_list = limit_text_and_add_space(text_list,is_add_space=is_add_space)
     return text_list
 
 def data_split_start_end(text_list,part=4,cur_index=0):
@@ -300,6 +300,7 @@ def data_split_start_end(text_list,part=4,cur_index=0):
 FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
 FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
+FONT_EN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\手写体')
 
 # 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
 '''
@@ -314,15 +315,16 @@ with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encodi
 # 所有可选的书名、作者名列表。
 
 
-# text_list = text_list_gen(txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\author_bookname\text_100.txt')
+text_list = text_list_gen(txt_path = r'F:\dataset\OCR\图书目录\zhongkeda_ret_0529\callnumber_tail.txt',is_add_space=False)
 # start,end = data_split_start_end(text_list)
 # text_list = text_list[start:end]
-NUM_IMG = 10**5
-text_list = series_text_gen(data_num=NUM_IMG)
+NUM_IMG = 10**2
+# text_list = series_text_gen(data_num=NUM_IMG)
 
 local_time = time.localtime()
 mon, day, hour,minite,sec = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour,local_time.tm_min,local_time.tm_sec
 DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{minite:02}_{sec:02}')
+# BG_DIR = Path(r'F:\dataset\OCR\callnumber_gen\callnumber_bg')
 BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -330,7 +332,9 @@ CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
 font_cfg = dict(
     font_dir=FONT_SMP,
-    font_size=(41, 43),  # 34,36
+    font_size=(34, 36),# 34,36
+    sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
+
 )
 
 small_font_cfg = dict(
@@ -352,8 +356,8 @@ if vertical:
         # *line(),
         # perspective_transform(),
         # effect_ensemble(),
-        # effect_ensemble(text_list*2),
-        multi_line_text(text_list*2)
+        effect_ensemble(text_list*15),
+        # multi_line_text(text_list*2)
         # color_image(text_list),
         # color_image(),
         # dropout_rand(),
@@ -379,7 +383,7 @@ else:
         # color_image(text_list),
         # effect_ensemble(text_list)
         # effect_ensemble()
-        multi_line_text()
+        # multi_line_text()
         # dropout_rand(),
         # dropout_horizontal(),
         # dropout_vertical(),

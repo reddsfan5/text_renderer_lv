@@ -36,7 +36,6 @@ class EnumCorpusCfg(CorpusCfg):
     filter_font_min_support_chars: int = 100
     join_str: str = ""
 
-
 class EnumCorpus(Corpus):
     """
     Randomly select items from the list

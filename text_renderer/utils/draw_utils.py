@@ -50,6 +50,150 @@ def draw_text_on_bg_hv(
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
         char_spacing: Union[float, Tuple[float, float]] = -1,
         save_dir: str = ''
+) -> tuple[PILImage,list,str]:
+    """
+
+    Parameters
+    ----------
+    font_text : FontText
+    text_color : RGBA
+        Default is black
+    char_spacing : Union[float, Tuple[float, float]]
+        Draw character with spacing. If tuple, random choice between [min, max)
+        Set -1 to disable
+
+    Returns
+    -------
+        PILImage:
+            RGBA Pillow image with text on a transparent image
+    -------
+
+    """
+    # todo lv 文字颜色锁死
+    # gray_value = random.randint(5,45)
+    # text_color = (gray_value,gray_value,gray_value,random.randint(210,255))
+
+    if char_spacing == -1:
+        if font_text.horizontal:
+            return _draw_text_on_bg(font_text, text_color)
+        else:
+            char_spacing = 0
+
+    chars_size = []
+    widths = []
+    heights = []
+
+    for c in font_text.text:
+        size = font_text.font.getsize(c)
+        if need_rotate(c):
+            chars_size.append(size)
+            widths.append(size[0])
+            heights.append(size[1])
+        else:
+            chars_size.append((size[1], size[0]))
+            widths.append(size[1])
+            heights.append(size[0])
+
+    if font_text.horizontal:
+        width = sum(widths)
+        height = max(heights)
+    else:
+        width = max(widths)
+        height = sum(heights)
+
+    char_spacings = []
+
+    cs_height = font_text.size[1]
+    for i in range(len(font_text.text)):
+        if isinstance(char_spacing, list) or isinstance(char_spacing, tuple):
+            s = np.random.uniform(*char_spacing)
+            char_spacings.append(int(s * cs_height))
+        else:
+            char_spacings.append(int(char_spacing * cs_height))
+
+    if font_text.horizontal:
+        width += sum(char_spacings[:-1])
+    else:
+        height += sum(char_spacings[:-1])
+
+    # 长宽估算，生成掩码
+    # text_mask = transparent_img((width, height))
+    # x方向两头填充字符数
+    x_pad_chars_num = 4
+    text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
+    pre_img = copy.deepcopy(text_mask)
+    draw = ImageDraw.Draw(text_mask)
+
+    x_start = c_x =  width
+    y_start = c_y = (x_pad_chars_num // 2) * width
+
+    horizontal_content = []
+    if font_text.horizontal:
+        y_offset = font_text.offset[1]
+        for i, c in enumerate(font_text.text):
+            draw.text((c_x, c_y - y_offset), c, fill=text_color, font=font_text.font)
+
+            c_x += chars_size[i][0] + char_spacings[i]
+    else:
+        x_offset = font_text.offset[0]
+        # 纵横书写，预留位置。实现中英文 书脊名字的排列形式。
+        vertical_location = []
+        vertical_text = []
+        for i, c in enumerate(font_text.text):
+            if need_rotate(c):
+                # 卧倒中文书写
+                draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
+                if c != ' ' and (np.array(text_mask) == pre_img).all():
+
+                    print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
+                    raise Imgerror()
+                else:
+                    pre_img = np.array(text_mask)
+            else:
+                vertical_location.append((c_y, text_mask.width - (c_x - x_offset + widths[i])))
+                vertical_text.append(c)
+
+            c_y += chars_size[i][1] + char_spacings[i]
+        text_mask = text_mask.rotate(90, expand=True)
+        draw2 = ImageDraw.Draw(text_mask)
+        pre_img = np.array(draw2)
+        for vt, loc in zip(vertical_text, vertical_location):
+            draw2.text(loc, vt, fill=text_color, font=font_text.font)
+            if vt != ' ' and (np.array(text_mask) == pre_img).all():
+                print(f'{osp.basename(font_text.font_path)}-出现字体残缺不齐全')
+                raise Imgerror('字体残缺不齐全')
+            else:
+                pre_img = np.array(text_mask)
+
+    pre_img = np.array(text_mask)[..., :3]
+
+
+
+
+    points = np.argwhere(pre_img < 255)
+    xmin = np.min(points[:, 1])
+    ymin = np.min(points[:, 0])
+    xmax = np.max(points[:, 1])
+    ymax = np.max(points[:, 0])
+    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
+    if save_dir:
+        if not osp.exists(save_dir):
+            os.mkdir(save_dir)
+
+        # 存储用于字体展示
+        text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
+
+    bbox = box_n.tolist()
+    font_base = osp.basename(font_text.font_path)
+
+    return text_mask, bbox, font_base
+
+
+def draw_text_on_bg_hv_no_pad(
+        font_text: FontText,
+        text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
+        char_spacing: Union[float, Tuple[float, float]] = -1,
+        save_dir: str = ''
 ) -> PILImage:
     """
 
@@ -113,15 +257,15 @@ def draw_text_on_bg_hv(
         height += sum(char_spacings[:-1])
 
     # 长宽估算，生成掩码
-    # text_mask = transparent_img((width, height))
+    text_mask = transparent_img((width, height))
     # x方向两头填充字符数
     x_pad_chars_num = 4
-    text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
+    # text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
     pre_img = copy.deepcopy(text_mask)
     draw = ImageDraw.Draw(text_mask)
 
-    x_start = c_x = width
-    y_start = c_y = (x_pad_chars_num // 2) * width
+    x_start = c_x = 0
+    y_start = c_y = 0
     horizontal_content = []
     if font_text.horizontal:
         y_offset = font_text.offset[1]
@@ -173,17 +317,14 @@ def draw_text_on_bg_hv(
         # s = base64.b64encode(os.urandom(3)).decode("utf8")
         # s = s.replace("\\", "").replace("/", "").replace("=","").replace("+","")
         # box det
-
         # 存储用于字体展示
         text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
 
-    # bbox = [[x_start, y_start], [x_start + sum(heights), y_start], [x_start + sum(heights), y_start + max(widths)],
-    #         [x_start, y_start + max(widths)]]
+
     bbox = box_n.tolist()
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base
-
 
 
 def draw_text_on_bg_multi_line(
@@ -191,7 +332,7 @@ def draw_text_on_bg_multi_line(
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
         char_spacing: Union[float, Tuple[float, float]] = -1,
         save_dir: str = ''
-) -> PILImage:
+) -> Tuple[PILImage,list,str]:
     """
 
     Parameters
@@ -485,7 +626,20 @@ def _draw_text_on_bg(
         anchor=None,
     )
 
-    return text_mask
+    pre_img = np.array(text_mask)[..., :3]
+    points = np.argwhere(pre_img < 255)
+    xmin = np.min(points[:, 1])
+    ymin = np.min(points[:, 0])
+    xmax = np.max(points[:, 1])
+    ymax = np.max(points[:, 0])
+    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
+
+    bbox = box_n.tolist()
+    font_base = osp.basename(font_text.font_path)
+
+
+
+    return text_mask,bbox,font_base
 
 
 from PIL import Image, ImageDraw, ImageFont

@@ -10,7 +10,7 @@ import numpy as np
 import traceback
 __package__ = 'lmdbs.lmdbs'
 
-from costum_utils.parse_json import getJsonDict
+from lv_tools.cores.json_io import load_json_to_dict
 from .utils import b64encode_img, b64decode_img
 from .visualize import Visualize
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     for img_path in list(Path(json_root).glob('**/*.jpg'))[:500]:
 
         json_path = img_path.with_suffix('.json')
-        jd = getJsonDict(str(json_path))
+        jd = load_json_to_dict(str(json_path))
         img_arr = cv2.imdecode(np.fromfile(str(img_path), dtype=np.uint8), 1)
         img_base = f'id-{count:09}'  # img_path.name
         print(img_base)

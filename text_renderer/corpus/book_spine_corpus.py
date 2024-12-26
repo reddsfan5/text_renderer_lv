@@ -4,8 +4,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from text_renderer.utils.errors import PanicError
+from tenacity import retry,stop_after_attempt
+from text_renderer.utils.errors import PanicError, RetryError
 from .corpus import Corpus, CorpusCfg
+from loguru import logger
+
+from ..utils import FontText
 
 
 @dataclass
@@ -28,6 +32,7 @@ class BookSpineCorpusCfg(CorpusCfg):
     """
 
     text_paths: List[Path] = field(default_factory=list)
+
     items: List[str] = field(default_factory=list)
     num_pick: int = 1
     filter_by_chars: bool = False
@@ -44,7 +49,7 @@ class BookSpineCorpus(Corpus):
 
     def __init__(self, cfg: "CorpusCfg"):
         super().__init__(cfg)
-
+        self.normalized_corpus = {}
         self.cfg: BookSpineCorpusCfg
         if len(self.cfg.text_paths) == 0 and len(self.cfg.items) == 0:
             raise PanicError(f"text_paths or items must not be empty")
@@ -89,16 +94,83 @@ class BookSpineCorpus(Corpus):
                     text = ''.join(list(filter(lambda x: x in chr_set, text)))
                     yield text
 
-    def get_text(self) -> str:
-        # todo lvxiaodong
-        if not self.texts:
-            self.texts = self.random_sample_text()
-        # 文本遍历模式
-        if isinstance(self.texts, list):
-            text = self.texts.pop()
+    @retry(stop=stop_after_attempt(10))
+    def get_font_text(self,text:str):
+        """
+        This method ensures that the selected font supports all characters.
 
-        return self.cfg.join_str.join(text)
-        # todo watch text info
-        # print(text)
-        # text = random_choice(self.texts, self.cfg.num_pick)
+        Returns:
+            FontText: A FontText object contains text and font.
+
+        """
+        # todo 文本标点过滤
+        # text = self.remove_punctuation(text)
+        # 最大文本长度控制
+        if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
+            text = text[: self.cfg.clip_length]
+
+        font, support_chars, font_path = self.font_manager.get_font()
+        status, intersect = self.font_manager.check_support(text, support_chars)
+        if not status:
+
+            err_msg = (
+                f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
+            )
+            # todo lvixaodong font check
+            with open(r'D:\lxd_code\OCR\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+                f.write(f'{font_path} {text}')
+                f.write('\n')
+            logger.debug(err_msg)
+            raise RetryError(err_msg)
+
+        return FontText(font, text, font_path, self.cfg.horizontal)
+
+
+    # @retry
+    # def sample(self):
+    #     """
+    #     This method ensures that the selected font supports all characters.
+    #
+    #     Returns:
+    #         FontText: A FontText object contains text and font.
+    #
+    #     """
+    #     text = self.get_text()
+    #     # todo 文本标点过滤
+    #     # text = self.remove_punctuation(text)
+    #
+    #     # 最大文本长度控制
+    #     if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
+    #         text = text[: self.cfg.clip_length]
+    #
+    #     font, support_chars, font_path = self.font_manager.get_font()
+    #     status, intersect = self.font_manager.check_support(text, support_chars)
+    #     if not status:
+    #
+    #         err_msg = (
+    #             f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
+    #         )
+    #         # todo lvixaodong font check
+    #         with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+    #             f.write(f'{font_path} {text}')
+    #             f.write('\n')
+    #         logger.debug(err_msg)
+    #         raise RetryError(err_msg)
+    #
+    #     return FontText(font, text, font_path, self.cfg.horizontal)
+    #
+    #
+    #
+    # def get_text(self) -> str:
+    #     # todo lvxiaodong
+    #     if not self.texts:
+    #         self.texts = self.random_sample_text()
+    #     # 文本遍历模式
+    #     if isinstance(self.texts, list):
+    #         text = self.texts.pop()
+    #
+    #     return self.cfg.join_str.join(text)
+    #     # todo watch text info
+    #     # print(text)
+    #     # text = random_choice(self.texts, self.cfg.num_pick)
 

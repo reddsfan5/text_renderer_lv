@@ -26,7 +26,7 @@ def add_space(cuted_list:List[str]) -> str:
         return cuted_list[0]
 
 
-def limit_text_and_add_space(text_list, limit_len=None):
+def limit_text_and_add_space(text_list, limit_len=None,is_add_space=True):
     if limit_len:
         text_list = limit_text_length(text_list, limit_len)
     text_list_with_space = []
@@ -34,8 +34,10 @@ def limit_text_and_add_space(text_list, limit_len=None):
         if not text_item:
             continue
         cutted_list = text_cut(text_item)
-
-        text_list_with_space.append(add_space(cutted_list))
+        if is_add_space:
+            text_list_with_space.append(add_space(cutted_list))
+        else:
+            text_list_with_space.append(cutted_list)
     return text_list_with_space
 if __name__ == '__main__':
 

@@ -93,6 +93,7 @@ Create a `config.py` file in `workspace` directory. One configuration file must 
 a list of [GeneratorCfg](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.GeneratorCfg). 
 
 The complete configuration file is as follows:
+
 ```python
 import os
 from pathlib import Path
@@ -103,7 +104,7 @@ from text_renderer.config import (
     RenderCfg,
     NormPerspectiveTransformCfg,
     GeneratorCfg,
-    SimpleTextColorCfg,
+    SafeTextColorCfg,
 )
 
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
@@ -127,7 +128,7 @@ def story_data():
             ),
             corpus_effects=Effects(Line(0.9, thickness=(2, 5))),
             gray=False,
-            text_color_cfg=SimpleTextColorCfg(),
+            text_color_cfg=SafeTextColorCfg(),
         ),
     )
 

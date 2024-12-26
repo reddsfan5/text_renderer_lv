@@ -1,53 +1,57 @@
+import os
 import random
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Set, Tuple, Dict, Optional
-import os
+from typing import List, Set, Tuple, Dict
+
+import pandas as pd
 from PIL import ImageFont
 from PIL.ImageFont import FreeTypeFont
 from fontTools.ttLib import TTFont, TTCollection
 from loguru import logger
 
-from text_renderer.utils.errors import PanicError
 from text_renderer.utils.utils import load_chars_file
 
 
+def get_excel_font(excel_path: str):
+    df = pd.read_excel(excel_path)
+    font_bases = set(df['字体'])
+    return font_bases
+
+
 class FontManager:
-    def __init__(
-        self, font_dir: Path, font_list_file: Optional[Path], font_size: Tuple[int, int]
-    ):
+    def __init__(self, font_dir: Path, font_size: Tuple[int, int], sp_font_excel_path: str = ''):
         assert font_size[0] < font_size[1]
-        self.font_size_min = font_size[0]
-        self.font_size_max = font_size[1]
-        self.font_paths: List[str] = []
+        self.font_size_range = font_size
+        self.font_dir = font_dir
+        self.font_paths: List[str] = self._get_font_paths(sp_font_excel_path)
         self.font_support_chars_cache: Dict[str, Set] = {}
         # Created in self.update_font_support_chars(), used to filter font_path
         self.font_support_chars_intersection_with_chars: Dict[str, Set] = {}
 
-        if font_list_file is not None:
-            with open(str(font_list_file), "r", encoding="utf-8") as f:
-                lines = f.readlines()
-                lines = [line.strip() for line in lines]
-
-            if len(lines) == 0:
-                raise PanicError(f"font list file is empty: {font_list_file}")
-
-            for line in lines:
-                font_path = font_dir / line
-                if font_path.exists():
-                    self.font_paths.append(str(font_path))
-                else:
-                    raise PanicError(f"font file not exist: {font_path}")
-        else:
-            for font_path in font_dir.glob("**/*"):
-                if font_path.suffix in [".ttc", ".TTC", ".ttf", ".TTF", ".otf", ".OTF"]:
-                    self.font_paths.append(str(font_path))
-
         self._load_font_support_chars()
+
+    def _get_font_paths(self, sp_font_excel_path: str = ''):
+        '''
+        r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
+        -------
+
+        '''
+        valid_font = get_excel_font(sp_font_excel_path) if sp_font_excel_path and os.path.exists(
+            sp_font_excel_path) else set()
+        font_paths = []
+        for font_path in self.font_dir.glob("**/*"):
+            if font_path.suffix in [".ttc", ".TTC", ".ttf", ".TTF", ".otf", ".OTF"]:
+                if valid_font and os.path.basename(font_path) not in self.valid_font:
+                    continue
+                else:
+                    font_paths.append(str(font_path))
+
+        return font_paths
 
     def get_font(self) -> Tuple[FreeTypeFont, Set, str]:
         font_path = random.choice(self.font_paths)
-        font_size = random.randint(self.font_size_min, self.font_size_max)
+        font_size = random.randint(*self.font_size_range)
 
         font = self._get_font(font_path, font_size)
         font_support_chars = self.font_support_chars_cache[font_path]
@@ -56,8 +60,6 @@ class FontManager:
 
     def check_support(self, text: str, chars: Set) -> Tuple[bool, Set]:
         # Check whether all chars in text exist in chars
-        # with open(r'E:\lxd\OCR_project\OCR_SOURCE\corpus\merged/filtered_path.txt', encoding='utf8', mode='r') as chr:
-        #     text_set = set(chr.read().split('\n'))
 
         text_set = set(text)
         intersect = text_set - chars
@@ -103,9 +105,9 @@ class FontManager:
             for c in chars & charset:
                 bbox = font.getmask(c).getbbox()
                 if (
-                    c not in white_list
-                    and bbox is None
-                    and c in self.font_support_chars_cache[font_path]
+                        c not in white_list
+                        and bbox is None
+                        and c in self.font_support_chars_cache[font_path]
                 ):
                     self.font_support_chars_cache[font_path].remove(c)
                     removed_chars.append(c)
@@ -121,7 +123,7 @@ class FontManager:
                     )
 
             self.font_support_chars_intersection_with_chars[font_path] = (
-                self.font_support_chars_cache[font_path] & chars
+                    self.font_support_chars_cache[font_path] & chars
             )
 
     def filter_font_path(self, min_support_chars: int):
@@ -158,16 +160,16 @@ class FontManager:
         """
 
         # ttc is collection of ttf
-        if font_path.endswith(("ttc","TTC")):
+        if font_path.endswith(("ttc", "TTC")):
             ttc = TTCollection(font_path)
             # assume all ttfs in ttc file have same supported chars
             return ttc.fonts[0]
 
         if (
-            font_path.endswith("ttf")
-            or font_path.endswith("TTF")
-            or font_path.endswith("otf")
-            or font_path.endswith("OTF")
+                font_path.endswith("ttf")
+                or font_path.endswith("TTF")
+                or font_path.endswith("otf")
+                or font_path.endswith("OTF")
         ):
             ttf = TTFont(
                 font_path, 0, allowVID=0, ignoreDecompileErrors=True, fontNumber=-1
@@ -180,10 +182,11 @@ class FontManager:
         font = ImageFont.truetype(font_path, font_size)
         return font
 
+
 def font_check_rm_wrong(font_paths):
     for font_path in font_paths:
         print(font_path)
-        if font_path.endswith(("ttc","TTC")):
+        if font_path.endswith(("ttc", "TTC")):
             ttc = TTCollection(font_path)
             # assume all ttfs in ttc file have same supported chars
             ttf = ttc.fonts[0]
@@ -212,7 +215,7 @@ def font_check_rm_wrong(font_paths):
 
 if __name__ == '__main__':
     font_dir_path = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\tem')
-    font_file_path= Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_file\font_file.txt')
+    font_file_path = Path(r'E:\lxd\OCR_project\OCR_SOURCE\font\font_set\font_file\font_file.txt')
     # font_file_path = None
     # for _ in range(10):
     #     fm =  FontManager(font_dir_path,font_file_path,(10,20))

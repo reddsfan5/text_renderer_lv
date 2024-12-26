@@ -8,7 +8,7 @@ from loguru import logger
 from tenacity import retry, stop_after_attempt
 
 from text_renderer.font_manager import FontManager
-from text_renderer.config import TextColorCfg, SimpleTextColorCfg
+from text_renderer.config import TextColorCfg, SafeTextColorCfg
 from text_renderer.utils.errors import RetryError, PanicError
 from text_renderer.utils import FontText
 from text_renderer.utils.utils import load_chars_file
@@ -44,7 +44,7 @@ class CorpusCfg:
     font_list_file: Path = None
     clip_length: int = -1
     char_spacing: Union[float, Tuple[float, float]] = -1
-    text_color_cfg: TextColorCfg = SimpleTextColorCfg()
+    text_color_cfg: TextColorCfg = SafeTextColorCfg()
     horizontal: bool = True
 
     def __init_subclass__(cls, **kwargs):
@@ -66,7 +66,7 @@ class Corpus:
         self.cfg = cfg
         self.cur_corpus = ''
         self.font_manager = FontManager(
-            cfg.font_dir, cfg.font_list_file, cfg.font_size,
+            cfg.font_dir, cfg.font_size
         )
         self.punctuation = r'[-~!@#$%^&*()+_=`:;<>?,./|\]+[+——！，。？、~@#￥%……&*（）《》（）&%￥#@！{}【】~·！#￥%=；：’‘“”-]+'
 
@@ -104,6 +104,28 @@ class Corpus:
             )
             # todo lvixaodong font check
             with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+                f.write(f'{font_path} {text}')
+                f.write('\n')
+            logger.debug(err_msg)
+            raise RetryError(err_msg)
+
+        return FontText(font, text, font_path, self.cfg.horizontal)
+
+
+
+    def get_font_text(self,text:str):
+        # 最大文本长度控制
+        if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
+            text = text[: self.cfg.clip_length]
+
+        font, support_chars, font_path = self.font_manager.get_font()
+        status, intersect = self.font_manager.check_support(text, support_chars)
+        if not status:
+            err_msg = (
+                f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
+            )
+            # todo lvixaodong font check
+            with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt', mode='a+', encoding='utf8') as f:
                 f.write(f'{font_path} {text}')
                 f.write('\n')
             logger.debug(err_msg)

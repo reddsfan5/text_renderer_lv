@@ -8,7 +8,7 @@ from lv_tools.task_ocr_text_render.series_text import (
 from text_renderer.config import (
     RenderCfg,
     GeneratorCfg,
-    SimpleTextColorCfg,
+    SafeTextColorCfg,
     FixedTextColorCfg,
 )
 from text_renderer.corpus import *
@@ -45,8 +45,8 @@ def book_spine_text(items=None):
 
     cfg.render_cfg.corpus = [BookSpineCorpus(
         BookSpineCorpusCfg(
-            items=items if items else ["2005中国最佳诗歌"],  # Hello你好english规规
-            text_color_cfg=SimpleTextColorCfg(),
+            items=items,  # Hello你好english规规
+            text_color_cfg=SafeTextColorCfg(),
             **font_cfg,
         ),
     ), ]
@@ -79,8 +79,8 @@ BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
 font_cfg = dict(
-    font_dir=FONT_MINI,
-    font_size=(41, 43),  # 34,36
+    font_dir=FONT_SMP,
+    font_size=(34, 36),  # 34,36
 )
 
 small_font_cfg = dict(

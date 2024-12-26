@@ -10,13 +10,12 @@ import random
 import os
 import base64
 
-from tqdm import tqdm
-
-from .parse_json import get_specific_file_paths, getJsonDict
+from lv_tools.cores.file_ops import get_specific_file_paths
+from lv_tools.cores.json_io import load_json_to_dict
 
 
 def pattern_generator(png_dir):
-    img_paths = get_specific_file_paths(png_dir, '.png')
+    img_paths = list(get_specific_file_paths(png_dir, ('.png',)))
     while True:
         yield str(random.choice(img_paths))
 
@@ -127,7 +126,7 @@ def grid_img(rows=5, columns=5, img_size=(2560, 1440), density=.5, img=None, sho
 
 
 def render_json_template(boxes, json_path, dst_dir):
-    jd = getJsonDict(json_path)
+    jd = load_json_to_dict(json_path)
     new_shapes = []
     shape = jd['shapes'][0]
     for box in boxes:

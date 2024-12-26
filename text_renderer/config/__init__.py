@@ -1,14 +1,13 @@
-import importlib
-import traceback
-from importlib.util import spec_from_file_location
+import colorsys
 import os
 import random
+import traceback
 import typing
-from abc import abstractmethod
+from abc import abstractmethod,ABC
 from dataclasses import dataclass
+from importlib.util import spec_from_file_location
 from pathlib import Path
 from typing import List, Tuple, Union
-import colorsys
 import numpy as np
 from PIL.Image import Image as PILImage
 
@@ -82,11 +81,14 @@ class NormPerspectiveTransformCfg(PerspectiveTransformCfg):
         return x, y, z
 
 
-class TextColorCfg:
+class TextColorCfg(ABC):
     """
-    Base class for TextColorCfg
+    负责文字颜色的获取
     """
-
+    r: int = 0
+    g: int = 0
+    b: int = 0
+    alpha:Tuple[int, int] = (240, 255)
     @abstractmethod
     def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
         pass
@@ -94,87 +96,51 @@ class TextColorCfg:
 
 @dataclass
 class FixedTextColorCfg(TextColorCfg):
-    # For generate effect/layout example
+    '''
+    spicified color
+    '''
     def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
-        alpha = 255
-        text_color = (0, 0, 0, alpha)
-        # text_color = (255, 50, 0, alpha)
-
+        text_color = (self.r, self.g, self.b, random.randint(*self.alpha))
         return text_color
 
 
 @dataclass
-class SimpleTextColorCfg(TextColorCfg):
+class SafeTextColorCfg(TextColorCfg):
     """
     Randomly use mean value of background image
     """
-
-    alpha: Tuple[int, int] = (240, 255)
-
     def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
         np_img = np.array(bg_img)
         mean = np.mean(np_img, axis=(0, 1))[:3]
         # 注意这里是RGB还是BGR。
         '''
         在HSV空间，1/2 是补色。
-                values = [
-            # rgb, hsv
-            ((0.0, 0.0, 0.0), (  0  , 0.0, 0.0)), # black
-            ((0.0, 0.0, 1.0), (4./6., 1.0, 1.0)), # blue
-            ((0.0, 1.0, 0.0), (2./6., 1.0, 1.0)), # green
-            ((0.0, 1.0, 1.0), (3./6., 1.0, 1.0)), # cyan
-            ((1.0, 0.0, 0.0), (  0  , 1.0, 1.0)), # red
-            ((1.0, 0.0, 1.0), (5./6., 1.0, 1.0)), # purple
-            ((1.0, 1.0, 0.0), (1./6., 1.0, 1.0)), # yellow
-            ((1.0, 1.0, 1.0), (  0  , 0.0, 1.0)), # white
-            ((0.5, 0.5, 0.5), (  0  , 0.0, 0.5)), # grey
-        ]
+                
+            #     rgb                   hsv
+            
+            (0.0, 0.0, 0.0),    (  0  , 0.0, 0.0), # black
+            (0.0, 0.0, 1.0),    (4./6., 1.0, 1.0), # blue
+            (0.0, 1.0, 0.0),    (2./6., 1.0, 1.0), # green
+            (0.0, 1.0, 1.0),    (3./6., 1.0, 1.0), # cyan
+            (1.0, 0.0, 0.0),    (  0  , 1.0, 1.0), # red
+            (1.0, 0.0, 1.0),    (5./6., 1.0, 1.0), # purple
+            (1.0, 1.0, 0.0),    (1./6., 1.0, 1.0), # yellow
+            (1.0, 1.0, 1.0),    (  0  , 0.0, 1.0), # white
+            (0.5, 0.5, 0.5),    (  0  , 0.0, 0.5), # grey
         '''
+        # 涉及到数据环的，取余去解决。
         color_h, color_s, color_v = colorsys.rgb_to_hsv(*(mean / 255).tolist())
-        anti_h = color_h - random.uniform(.25, .5) if color_h > .5 else color_h + random.uniform(.25, .5)
-        # anti_s = color_s - random.uniform(1 / 4, .5) if color_s > .5 else color_s + random.uniform(1 / 4, .5)
-        anti_s = random.uniform(.1,1.0)
-        anti_v = color_v - random.uniform(.3, .5) if color_v > .5 else color_v + random.uniform(.3, .5)
+        anti_h = (color_h - random.uniform(.4, .6)) % 1
+        anti_s = random.uniform(.3, 1.0)
+        anti_v = (color_v - random.uniform(.4, .6)) % 1
 
-        anti_r,anti_g,anti_b = (np.array(colorsys.hsv_to_rgb(anti_h,anti_s,anti_v))*255).astype(np.uint8).tolist()
+        anti_r, anti_g, anti_b = (np.array(colorsys.hsv_to_rgb(anti_h, anti_s, anti_v)) * 255).astype(np.uint8).tolist()
 
         alpha = np.random.randint(*self.alpha)
-        safe_value = 70
-        # r = np.random.randint(0,int(mean[0])-safe_value) if mean[0]>127 else np.random.randint(int(mean[0])+safe_value,255)
-        # g = np.random.randint(0,int(mean[1])-safe_value) if mean[1]>127 else np.random.randint(int(mean[1])+safe_value,255)
-        # b = np.random.randint(0,int(mean[2])-safe_value) if mean[2]>127 else np.random.randint(int(mean[2])+safe_value,255)
 
-        # todo lvxiaodong safe color   https://docs.python.org/zh-cn/3/library/colorsys.html
-        # channel = []
-        # for i in range(3):
-        #     left = min((int(mean[i]) - safe_value) % 255, int(mean[i] - safe_value - 30) % 255)
-        #     right = max((int(mean[i]) - safe_value) % 255, int(mean[i] - safe_value - 30) % 255)
-        #     # channel.append(np.random.randint(left, right))
-        #
-        #     # todo lvxiaodong tem
-        #     channel.append(0)
-
-        # text_color = (channel[0], channel[1], channel[2], alpha)
         text_color = (anti_r, anti_g, anti_b, alpha)
 
         return text_color
-
-    # def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
-    #     np_img = np.array(bg_img)
-    #     mean = np.mean(np_img)
-    #
-    #     alpha = np.random.randint(*self.alpha)
-    #
-    #
-    #
-    #     r = np.random.randint(0, int(mean * 0.7))
-    #     g = np.random.randint(0, int(mean * 0.7))
-    #     b = np.random.randint(0, int(mean * 0.7))
-    #
-    #
-    #     text_color = (r, g, b, alpha)
-    #
-    #     return text_color
 
 
 # noinspection PyUnresolvedReferences
@@ -291,3 +257,7 @@ def import_module_from_file(full_path_to_module):
 
     finally:
         return module
+
+
+if __name__ == '__main__':
+    print(-0.2 % 1)
