@@ -89,6 +89,7 @@ class EnumCorpus(Corpus):
                     yield text
 
     def get_text(self) -> str:
+        text = '文本占位'
         # todo lvxiaodong
         if not self.texts:
             self.texts = self.random_sample_text()

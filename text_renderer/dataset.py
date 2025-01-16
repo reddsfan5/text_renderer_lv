@@ -154,7 +154,7 @@ class LmdbDataset(Dataset):
 
     """
 
-    def __init__(self, data_dir: str, map_size=1 * 1024 * 1024 * 1024):  # 默认初始大小
+    def __init__(self, data_dir: str, map_size=20 * 1024 * 1024 * 1024):  # 默认初始大小
         super().__init__(data_dir)
         self._lmdb_env = lmdb.open(self.data_dir, map_size=map_size)
         self._lmdb_txn = self._lmdb_env.begin(write=True)

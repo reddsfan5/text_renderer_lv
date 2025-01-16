@@ -21,7 +21,7 @@ def get_excel_font(excel_path: str):
 
 class FontManager:
     def __init__(self, font_dir: Path, font_size: Tuple[int, int], sp_font_excel_path: str = ''):
-        assert font_size[0] < font_size[1]
+        assert font_size[0] <= font_size[1]
         self.font_size_range = font_size
         self.font_dir = font_dir
         self.font_paths: List[str] = self._get_font_paths(sp_font_excel_path)
@@ -51,7 +51,8 @@ class FontManager:
 
     def get_font(self) -> Tuple[FreeTypeFont, Set, str]:
         font_path = random.choice(self.font_paths)
-        font_size = random.randint(*self.font_size_range)
+
+        font_size = random.choice(range(*self.font_size_range))
 
         font = self._get_font(font_path, font_size)
         font_support_chars = self.font_support_chars_cache[font_path]

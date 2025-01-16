@@ -4,14 +4,13 @@ import traceback
 from concurrent.futures import ProcessPoolExecutor,as_completed
 from datetime import datetime
 from pathlib import Path
-import numpy as np
+
 import cv2
 from tqdm import tqdm
-import random
+
 from lv_tools.cores.json_io import load_json_to_dict, save_json
 from lv_tools.cores.str_utils import rand_str
 from lv_tools.data_parsing.labelme_json_constructor import construct_labelme_jd
-from lv_tools.img_tools.rotate_box import rotate_image_arr_and_polygons
 from lv_tools.task_book_info_gen.bg_gen import MimicSpineBg
 from lv_tools.task_book_info_gen.book_info_content import BookSpineContent
 from lv_tools.task_book_info_gen.book_info_template import BookInfoTemplate
@@ -63,21 +62,6 @@ if __name__ == '__main__':
             bg,dst_jd = callnumber_render(template_jd, bg, item)
 
 
-
-            # filter
-
-            h_list = []
-            w_list = []
-            for shape in dst_jd['shapes']:
-                points = np.array(shape['points'], np.int32)
-                _, (w, h), _ = cv2.minAreaRect(points)
-                h_list.append(h)
-                w_list.append(w)
-            if not (len(h_list) == len(w_list) == 2 and abs(h_list[0] - h_list[1]) < 2 and abs(w_list[0] - w_list[1]) < 2):
-                continue
-
-
-
             time_str = datetime.now().strftime("%Y%m%d-%H%M%S%f")
 
             template_img_path = book_info_template_path.replace('.json', '.jpg')
@@ -88,24 +72,13 @@ if __name__ == '__main__':
             s = rand_str(5)
             img_base = f'{s}_{Path(template_img_path).stem}_{time_str}.jpg'
 
-
-
-
-            if (flag:=random.randint(0,1)):
-                dst_jd,bg = rotate_image_arr_and_polygons(dst_jd,bg,-90+random.randint(-10,10))
-            else:
-                dst_jd, bg = rotate_image_arr_and_polygons(dst_jd, bg, random.randint(-10, 10))
-
-
-            save_dir = dst_dir+f'_{str(flag).zfill(2)}'
-            if not os.path.exists(save_dir):
-                os.mkdir(save_dir)
-
-            cv2.imwrite(rf'{save_dir}\{img_base}',
+            if not os.path.exists(dst_dir):
+                os.mkdir(dst_dir)
+            cv2.imwrite(rf'{dst_dir}\{img_base}',
                         bg)
             dst_jd['imagePath'] = img_base
             # dst_jd = construct_labelme_jd(dst_shapes, img_base, bg_h, bg_w)
-            save_json(os.path.join(save_dir, img_base[:-3] + 'json'), dst_jd)
+            save_json(os.path.join(dst_dir, img_base[:-3] + 'json'), dst_jd)
 
 
 

@@ -301,6 +301,7 @@ FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风�
 FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
 FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
 FONT_EN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\手写体')
+FONT_ONE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险\单一字体\1')
 
 # 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
 '''
@@ -314,35 +315,44 @@ with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encodi
     chr_set = set(chr.read().split('\n'))
 # 所有可选的书名、作者名列表。
 
+# 索书号txt
+# txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\anhuidaxue_call_number\anhuidaxue-callnumber_splited.txt'
+# 书名txt
+txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\bookname\booklibrary_ext_less_25.txt'
 
-text_list = text_list_gen(txt_path = r'F:\dataset\OCR\图书目录\zhongkeda_ret_0529\callnumber_tail.txt',is_add_space=False)
+text_list = text_list_gen(txt_path = txt_path,is_add_space=False)
 # start,end = data_split_start_end(text_list)
 # text_list = text_list[start:end]
-NUM_IMG = 10**2
+NUM_IMG = 2*10**5
 # text_list = series_text_gen(data_num=NUM_IMG)
 
 local_time = time.localtime()
 mon, day, hour,minite,sec = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour,local_time.tm_min,local_time.tm_sec
 DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{minite:02}_{sec:02}')
 # BG_DIR = Path(r'F:\dataset\OCR\callnumber_gen\callnumber_bg')
-BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
+# BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
+BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg_texture')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
 
 
 font_cfg = dict(
-    font_dir=FONT_SMP,
-    font_size=(34, 36),# 34,36
-    sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
+    font_dir=FONT_ONE,
+    font_size=(38, 39),# 34,36
+    # sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
 
 )
 
 small_font_cfg = dict(
-    font_dir=FONT_MINI,
+    font_dir=FONT_ONE,
     font_size=(20, 21),
 )
 
 vertical = True
+# text_iter = itertools.cycle(text_list) # 当前接口不兼容迭代器
+text_list = max(1,2*(NUM_IMG//len(text_list)))*text_list
+
+
 
 if vertical:
 
@@ -356,7 +366,7 @@ if vertical:
         # *line(),
         # perspective_transform(),
         # effect_ensemble(),
-        effect_ensemble(text_list*15),
+        effect_ensemble(text_list),
         # multi_line_text(text_list*2)
         # color_image(text_list),
         # color_image(),

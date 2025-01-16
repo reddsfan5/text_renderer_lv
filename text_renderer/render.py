@@ -410,3 +410,61 @@ class RenderOne(Render):
         img, cropped_bg = self.paste_text_mask_on_bg(bg, transformed_text_mask)
 
         return img, font_text.text, cropped_bg, transformed_text_mask, bbox, font_base
+
+
+    def gen_single_corpus_by_gt(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',text:str='') -> Tuple[
+        PILImage, str, PILImage, PILImage]:
+
+        font_text = self.corpus.get_font_text(text)
+
+        bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
+
+        if with_pattern:
+            bg, pattern_core = self.paste_pattern(bg, font_text)
+        else:
+            pattern_core = bg
+
+        if self.cfg.text_color_cfg is not None:
+            text_color = self.cfg.text_color_cfg.get_color(pattern_core)
+
+        # corpus text_color has higher priority than RenderCfg.text_color_cfg
+        if self.corpus.cfg.text_color_cfg is not None:
+            text_color = self.corpus.cfg.text_color_cfg.get_color(pattern_core)
+
+        # 书写文本接口,写在透明背景上
+        if write_mode == 'oneline':
+            text_mask, bbox, font_base = draw_text_on_bg_hv(
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+            )
+        elif write_mode == 'multiline':
+            text_mask, bbox, font_base = draw_text_on_bg_multi_line(
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+            )
+
+        if self.cfg.corpus_effects is not None:
+            text_mask, _ = self.cfg.corpus_effects.apply_effects(
+                text_mask, BBox.from_size(text_mask.size)
+            )
+
+        if self.cfg.perspective_transform is not None:
+            transformer = PerspectiveTransform(self.cfg.perspective_transform)
+            # TODO: refactor this, now we must call get_transformed_size to call gen_warp_matrix
+            _ = transformer.get_transformed_size(text_mask.size)
+
+            try:
+                (
+                    transformed_text_mask,
+                    transformed_text_pnts,
+                ) = transformer.do_warp_perspective(text_mask)
+            except Exception as e:
+                logger.exception(e)
+                logger.error(font_text.font_path, "text", font_text.text)
+                raise e
+        else:
+            transformed_text_mask = text_mask
+        # 白背景的字融合到目标背景上
+        img, cropped_bg = self.paste_text_mask_on_bg(bg, transformed_text_mask)
+
+        return img, font_text.text, cropped_bg, transformed_text_mask, bbox, font_base

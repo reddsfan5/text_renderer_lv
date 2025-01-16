@@ -4,7 +4,9 @@ import math
 import os
 from collections import Counter
 from io import BytesIO
+from pprint import pprint
 
+import lmdb
 import PIL
 import cv2
 import json
@@ -189,48 +191,6 @@ class Visualize(object):
         return rand_idx
 
 
-def compute_difference(img, img1):
-    diff = img.astype(np.int32) - img1.astype(np.int32)
-    max_diff = diff.max()
-    min_diff = diff.min()
-    sum_diff = diff.sum()
-    diff = abs(diff)
-    sum_abs_diff = diff.sum()
-    return max_diff, min_diff, sum_diff, sum_abs_diff
-
-def blur_by_encode_decode(img, quality=None):
-    img_encode = cv2.imencode('.jpg', img, quality) #[1]
-    # str_encode = np.array(img_encode).tostring()
-    # nparr = np.fromstring(str_encode, np.uint8)
-    dec = cv2.imdecode(img_encode[1], cv2.IMREAD_COLOR)
-    return dec
-
-
-def analysis_jpg_loss():
-    src = cv2.imread('/nas/mfzou/temp.jpeg') #docs/images/whl/demo.jpg')
-    temp_path = './temp.jpg'
-    cv2.imwrite(temp_path, src)
-    save1 = cv2.imread(temp_path)
-    cv2.imwrite(temp_path, save1)
-    save2 = cv2.imread(temp_path)
-    cv2.imwrite(temp_path, save2)
-    save3 = cv2.imread(temp_path)
-
-    blur20 = blur_by_encode_decode(src, [int(cv2.IMWRITE_JPEG_QUALITY), 20])
-    blur80 = blur_by_encode_decode(src, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-    blur95 = blur_by_encode_decode(src, [int(cv2.IMWRITE_JPEG_QUALITY), 99])
-
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, save1)
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, save2)
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, save3)
-
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(save1, save2)
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, blur20)
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, blur80)
-    max_diff, min_diff, sum_diff, sum_abs_diff = compute_difference(src, blur95)
-
-
-    return save2
 def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_comp\cylinder\bar_rec_len_5_12p2_0804_cylinder_v1',num=100):
     from lmdbs.lmdbs.convert_compressed_file import cut_to_pieces
     from lmdbs.lmdbs.lmdb_saver import LmdbSaver
@@ -242,7 +202,7 @@ def visualize_esome_sample(lmdb_path=r'D:\dataset\bar_code\a_bar\a_rec\barcode_c
         os.mkdir(dst_path)
     for j in range(num):
         i = j # np.random.randint(0, lmdb_loader.num_samples)
-        data = lmdb_loader.__getitem__(i)
+        data = lmdb_loader[i]
         if data is None or data['image'] is None:
             continue
         vis.display_infor(data, file_name=dst_path+str(i) + '_infor.jpg')
@@ -262,13 +222,20 @@ def show_sp_data(lmdb_path:str,id = 86064):
         plt.show()
 
 
+
 if __name__ == '__main__':
-    visualize_esome_sample(r'D:\dataset\OCR\lmdb_datatest_121120_58_48\effect_layout_image\effect_ensembleauthor')
-    # # analysis_jpg_loss()
+    visualize_esome_sample(r'D:\dataset\OCR\lmdb_datatest_011616_46_33\effect_layout_image\effect_ensembleauthor',50)
+
     # cvt_data()
     # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')
     # li = [str(i).zfill(6) for i in range(10**6)]
     # print(li[:10])
+    # lmdb_path = r'F:\dataset\OCR\2.text_det\syn_digit_series_with_parenthesis_lmdb_num_5000'
+    # with lmdb.open(lmdb_path) as env:
+    #     with env.begin(write=False) as txn:
+    #         for k,v in txn.cursor():
+    #             if not k.decode('utf8').startswith('id-'):
+    #                 print(f"{k.decode('utf8')}---{v.decode('unicode_escape')}")
 
 
 

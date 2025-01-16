@@ -56,7 +56,7 @@ def book_spine_text(items=None):
 FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
 FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
-
+FONT_ONE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险\单一字体\2')
 # 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
 '''
 目前想到的优化方案是：
@@ -79,8 +79,8 @@ BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
 font_cfg = dict(
-    font_dir=FONT_SMP,
-    font_size=(34, 36),  # 34,36
+    font_dir=FONT_ONE,
+    font_size=(25, 26),  # 34,36
 )
 
 small_font_cfg = dict(
