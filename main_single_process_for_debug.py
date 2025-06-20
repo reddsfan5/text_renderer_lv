@@ -1,16 +1,17 @@
 import argparse
 import os
+import sys
 import traceback
 from multiprocessing import Value
 
 import cv2
 from loguru import logger
 
-from text_renderer.config import get_cfg, GeneratorCfg
-from text_renderer.dataset import LmdbDataset, ImgDataset
-from text_renderer.render import RenderOne,Render
-from text_renderer.utils.draw_utils import Imgerror
 
+from text_renderer.dataset import LmdbDataset, ImgDataset
+from text_renderer.render import RenderOne
+
+from text_renderer.config import get_cfg, GeneratorCfg
 cv2.setNumThreads(1)
 
 index = Value('i', 0)
@@ -43,10 +44,11 @@ class DBWriterProcess:
             logger.exception("DBWriterProcess error")
             raise e
 
-def generate_img(text:str):
+
+def generate_img(text: str):
     try:
         data = render(text)
-    except Imgerror:
+    except:
         data = None
         traceback.print_exc()
 
@@ -65,13 +67,16 @@ def process_setup(*args):
     logger.info(f"Finish setup image generate process: {os.getpid()}")
 
 
-def parse_args():
+def parse_args(arg_list:list=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="python file path")
     parser.add_argument("--dataset", default="img", choices=["lmdb", "img"])
     parser.add_argument("--num_processes", type=int, default=2)
     parser.add_argument("--log_period", type=float, default=10)
-    return parser.parse_args()
+    if arg_list is None:
+        return parser.parse_args()
+    else:
+        return parser.parse_args(arg_list)
 
 
 if __name__ == "__main__":
@@ -95,7 +100,12 @@ if __name__ == "__main__":
     font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
     '''
 
-    args = parse_args()
+    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
+
+    if not sys.argv[1:]:
+        args = parse_args(arg_list)
+    else:
+        args = parse_args()
 
     dataset_cls = LmdbDataset if args.dataset == "lmdb" else ImgDataset
 

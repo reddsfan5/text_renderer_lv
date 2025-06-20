@@ -5,7 +5,8 @@ import time
 import traceback
 from multiprocessing import Value
 from multiprocessing.context import Process
-
+import sys
+sys.path.append('D:\lxd_code\lv_tools\src')
 import cv2
 from loguru import logger
 
@@ -92,16 +93,27 @@ def process_setup(*args):
     logger.info(f"Finish setup image generate process: {os.getpid()}")
 
 
-def parse_args():
+def parse_args(arg_list: list = None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="python file path")
     parser.add_argument("--dataset", default="img", choices=["lmdb", "img"])
     parser.add_argument("--num_processes", type=int, default=2)
     parser.add_argument("--log_period", type=float, default=10)
-    return parser.parse_args()
+    if arg_list is None:
+        return parser.parse_args()
+    else:
+        return parser.parse_args(arg_list)
+
 
 
 if __name__ == "__main__":
+    '''
+    单进程，多进程，和书脊渲染的逻辑，存在不少冗余，比如颜色变换，存在三处。需要合并逻辑
+    
+    
+    '''
+
+
     '''
     # 代码都是针对写入lmdb 的逻辑进行改写的，没有维护写入img的逻辑，所以在写入img时，会报错。
     
@@ -127,8 +139,13 @@ if __name__ == "__main__":
     # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
     # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
     data_queue = manager.Queue()
+    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
 
-    args = parse_args()
+    if not sys.argv[1:]:
+        args = parse_args(arg_list)
+    else:
+        args = parse_args()
+    # args = parse_args()
 
     dataset_cls = LmdbDataset if args.dataset == "lmdb" else ImgDataset
 

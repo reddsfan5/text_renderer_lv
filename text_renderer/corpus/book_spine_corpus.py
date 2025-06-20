@@ -1,8 +1,9 @@
+import random
 import typing
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from tenacity import retry,stop_after_attempt
 from text_renderer.utils.errors import PanicError, RetryError
@@ -126,51 +127,14 @@ class BookSpineCorpus(Corpus):
         return FontText(font, text, font_path, self.cfg.horizontal)
 
 
-    # @retry
-    # def sample(self):
-    #     """
-    #     This method ensures that the selected font supports all characters.
-    #
-    #     Returns:
-    #         FontText: A FontText object contains text and font.
-    #
-    #     """
-    #     text = self.get_text()
-    #     # todo 文本标点过滤
-    #     # text = self.remove_punctuation(text)
-    #
-    #     # 最大文本长度控制
-    #     if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
-    #         text = text[: self.cfg.clip_length]
-    #
-    #     font, support_chars, font_path = self.font_manager.get_font()
-    #     status, intersect = self.font_manager.check_support(text, support_chars)
-    #     if not status:
-    #
-    #         err_msg = (
-    #             f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
-    #         )
-    #         # todo lvixaodong font check
-    #         with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
-    #             f.write(f'{font_path} {text}')
-    #             f.write('\n')
-    #         logger.debug(err_msg)
-    #         raise RetryError(err_msg)
-    #
-    #     return FontText(font, text, font_path, self.cfg.horizontal)
-    #
-    #
-    #
-    # def get_text(self) -> str:
-    #     # todo lvxiaodong
-    #     if not self.texts:
-    #         self.texts = self.random_sample_text()
-    #     # 文本遍历模式
-    #     if isinstance(self.texts, list):
-    #         text = self.texts.pop()
-    #
-    #     return self.cfg.join_str.join(text)
-    #     # todo watch text info
-    #     # print(text)
-    #     # text = random_choice(self.texts, self.cfg.num_pick)
+class TextCorpusGen:
+    def __init__(self, txt_file_path: Union[str, Path]):
+        self.txt_file_path = txt_file_path
 
+    def corpus_gener(self):
+        with open(self.txt_file_path, 'r', encoding='utf8') as f:
+            # return (line for line in f if line.strip())  # ValueError: I/O operation on closed file.
+            lines = [line.strip() for line in f if line.strip()]
+            random.shuffle(lines)
+            for line in lines:
+                yield line

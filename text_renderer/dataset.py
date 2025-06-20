@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import pstats
 import statistics
+import time
 import traceback
 from abc import abstractmethod
 from multiprocessing import Lock, Queue
@@ -563,9 +564,8 @@ if __name__ == "__main__":
 
     lmdb_dir = r'F:\D\dataset\OCR\need_multi_core_rec\hard_data_increament\hard_data_calibrated_liu_li_lv_rotated_increment_lmdb'
 
+    # cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
 
-
-    cProfile.run("gen_ocr_rec_lmdb_from_pieces('ch', root)",sort='cumtime',filename='time_analysis.prof')
     # main_async('ch',root)
     # main_async('ch',root)
 

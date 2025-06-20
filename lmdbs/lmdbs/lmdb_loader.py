@@ -22,7 +22,6 @@ class LMDBLoader(object):
         self.env = lmdb.open(
             lmdb_path,
             max_readers=32,
-            readonly=True,
             lock=False,
             readahead=False,
             meminit=False)

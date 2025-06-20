@@ -3,8 +3,8 @@ import os
 import time
 from pathlib import Path
 
-from lv_tools.task_ocr_text_render.series_text import (
-    series_text_gen)
+from lv_tools.corpus.series_text import series_text_gen
+
 from text_renderer.config import (
     RenderCfg,
     GeneratorCfg,

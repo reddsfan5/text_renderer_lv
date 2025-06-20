@@ -3,34 +3,23 @@ import os
 import random
 from os import path as osp
 from typing import Tuple, Union
+
 import numpy as np
-from PIL import ImageDraw, Image
+from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PILImage
 
-from costum_utils.text_segmentation import limit_text_and_add_space
-from lv_tools.task_ocr_text_render.series_text import series_text_gen, one_line_text_2_multi_line_text
-from text_renderer.utils.font_text import FontText
-from lv_tools.task_ocr_text_render.digit_str_gen import DigitGenerator
-dg = DigitGenerator()
+from lv_tools.str_utils.text_rotate import is_need_rotate
 
-CLOSE_APOSTROPHE = {'【', '】', '（', '）', '《', '》', '“', '”', '〔', '〕', '〈', '〉', '「', '」', '『', '』', '〖',
-                    '〗'}  # ord大于256的闭合标点， '{', '}'不分全角半角，其ord小于256。
+from lv_tools.corpus.digit_str_gen import DigitGenerator
+from lv_tools.corpus.series_text import one_line_text_2_multi_line_text
+from text_renderer.utils.font_text import FontText
+
+dg = DigitGenerator()
 
 
 class Imgerror(RuntimeError):
     def __init__(self, arg=None):
         self.args = arg
-
-
-def need_rotate(char):
-    # 1. 数字，英文，闭合标点 不需要旋转。 数字切出来，基本都是非旋转的。
-    # 2. 非闭合标点 旋转后最好居中（这个可先不管）
-    # 3.中文需要旋转
-    # return False
-    if ord(char) < 256 or char in CLOSE_APOSTROPHE:
-        return False
-    else:
-        return True
 
 
 def transparent_img(size: Tuple[int, int]) -> PILImage:
@@ -50,7 +39,7 @@ def draw_text_on_bg_hv(
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
         char_spacing: Union[float, Tuple[float, float]] = -1,
         save_dir: str = ''
-) -> tuple[PILImage,list,str]:
+) -> tuple[PILImage, list, str]:
     """
 
     Parameters
@@ -85,7 +74,7 @@ def draw_text_on_bg_hv(
 
     for c in font_text.text:
         size = font_text.font.getsize(c)
-        if need_rotate(c):
+        if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -124,7 +113,7 @@ def draw_text_on_bg_hv(
     pre_img = copy.deepcopy(text_mask)
     draw = ImageDraw.Draw(text_mask)
 
-    x_start = c_x =  width
+    x_start = c_x = width
     y_start = c_y = (x_pad_chars_num // 2) * width
 
     horizontal_content = []
@@ -140,7 +129,7 @@ def draw_text_on_bg_hv(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if need_rotate(c):
+            if is_need_rotate(c):
                 # 卧倒中文书写
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
                 if c != ' ' and (np.array(text_mask) == pre_img).all():
@@ -167,9 +156,6 @@ def draw_text_on_bg_hv(
 
     pre_img = np.array(text_mask)[..., :3]
 
-
-
-
     points = np.argwhere(pre_img < 255)
     xmin = np.min(points[:, 1])
     ymin = np.min(points[:, 0])
@@ -187,6 +173,15 @@ def draw_text_on_bg_hv(
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base
+
+
+def draw_text_on_white_mask_handwritting(
+        font_text: FontText,
+        text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
+        char_spacing: Union[float, Tuple[float, float]] = -1,
+        save_dir: str = ''
+) -> PILImage:
+    pass
 
 
 def draw_text_on_bg_hv_no_pad(
@@ -225,7 +220,7 @@ def draw_text_on_bg_hv_no_pad(
 
     for c in font_text.text:
         size = font_text.font.getsize(c)
-        if need_rotate(c):
+        if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -279,7 +274,7 @@ def draw_text_on_bg_hv_no_pad(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if need_rotate(c):
+            if is_need_rotate(c):
                 # 卧倒中文书写
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
                 if c != ' ' and (np.array(text_mask) == pre_img).all():
@@ -320,7 +315,6 @@ def draw_text_on_bg_hv_no_pad(
         # 存储用于字体展示
         text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
 
-
     bbox = box_n.tolist()
     font_base = osp.basename(font_text.font_path)
 
@@ -332,7 +326,7 @@ def draw_text_on_bg_multi_line(
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
         char_spacing: Union[float, Tuple[float, float]] = -1,
         save_dir: str = ''
-) -> Tuple[PILImage,list,str]:
+) -> Tuple[PILImage, list, str]:
     """
 
     Parameters
@@ -369,7 +363,6 @@ def draw_text_on_bg_multi_line(
     width, height = bbox[2] - bbox[0], bbox[3] - bbox[0]
     margin = min(width, height)  # 文本周围留白的像素
 
-
     text_mask = transparent_img((width + 2 * margin, height + 2 * margin))
     # 四周的padding 平均一个height。
     # pre_img = copy.deepcopy(text_mask)
@@ -399,8 +392,6 @@ def draw_text_on_bg_multi_line(
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base
-
-
 
 
 def draw_text_on_bg(
@@ -439,7 +430,7 @@ def draw_text_on_bg(
 
     for c in font_text.text:
         size = font_text.font.getsize(c)
-        if need_rotate(c):
+        if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -489,7 +480,7 @@ def draw_text_on_bg(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if need_rotate(c):
+            if is_need_rotate(c):
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
             else:
                 vertical_location.append((c_y, text_mask.width - (c_x - x_offset + widths[i])))
@@ -637,12 +628,8 @@ def _draw_text_on_bg(
     bbox = box_n.tolist()
     font_base = osp.basename(font_text.font_path)
 
+    return text_mask, bbox, font_base
 
-
-    return text_mask,bbox,font_base
-
-
-from PIL import Image, ImageDraw, ImageFont
 
 def draw_multiline_text_centered(image_path, text, font_path, font_size):
     # 打开底图
@@ -679,13 +666,11 @@ def draw_multiline_text_centered(image_path, text, font_path, font_size):
     # 保存或展示图像
     image.show()
 
+
 # 示例使用
 
 
-
-
 if __name__ == '__main__':
-
     '''
     1. 多行书写的方式可较为容易的实现数字横着
     2. 潜在隐患是因为同时书写，如果写空字不容易检查到。（当然，如果字体map文件过滤的好，这个问题基本不用担心）
@@ -696,22 +681,21 @@ if __name__ == '__main__':
     
     '''
 
-    from PIL import Image, ImageDraw, ImageFont
-
-    # create an image
-    out = Image.new("RGB", (500, 500), (255, 255, 255))
-
-    # get a font
-    fnt = ImageFont.truetype(r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 40)
-    # get a drawing context
-    d = ImageDraw.Draw(out)
+    # # create an image
+    # out = Image.new("RGB", (500, 500), (255, 255, 255))
     #
-    # # draw multiline text
-    for cur_text in series_text_gen(10):
-        bbox = d.multiline_textbbox((100, 100), cur_text, font=fnt)
-        d.rectangle(bbox, outline=(0, 0, 255, 255))
-        print(bbox)
-        d.multiline_text((100, 100), cur_text, font=fnt, fill=(0, 0, 0))
-        out.show()
+    # # get a font
+    # fnt = ImageFont.truetype(
+    #     r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 40)
+    # # get a drawing context
+    # d = ImageDraw.Draw(out)
+    # #
+    # # # draw multiline text
+    # for cur_text in series_text_gen(10):
+    #     bbox = d.multiline_textbbox((100, 100), cur_text, font=fnt)
+    #     d.rectangle(bbox, outline=(0, 0, 255, 255))
+    #     print(bbox)
+    #     d.multiline_text((100, 100), cur_text, font=fnt, fill=(0, 0, 0))
+    #     out.show()
 
     # draw_multiline_text_centered("path_to_your_image.jpg", cur_text, r"D:\lxd_code\OCR\OCR_SOURCE\font\font_set - 副本\简体-简体-低风险\粗体\字魂4456号-悠然飘扬体.ttf", 20)

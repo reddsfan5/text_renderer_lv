@@ -1,3 +1,4 @@
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Tuple
@@ -18,7 +19,7 @@ class BgManager:
         self.bg_imgs: List[PILImage] = []
         self.pre_load = pre_load
 
-        for p in bg_dir.glob("**/*"):
+        for p in bg_dir.rglob("*"):
             if p.suffix in IMAGE_EXTENSIONS:
                 if self._is_transparent_image(p):
                     logger.warning(f"Ignore transparent background image, please convert is to JPEG: {p}")
@@ -68,3 +69,15 @@ class BgManager:
         pil_img: PILImage = Image.open(bg_path)
         pil_img = pil_img.convert("RGBA")
         return pil_img
+
+
+
+
+if __name__ == '__main__':
+    # bg_gener = BgManager(Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg\bg_pure'))
+    # bg = bg_gener.get_bg()
+    # print(bg.size)
+    # bg = bg_gener.guard_bg_size(bg,(1440,1920))
+    # print(bg.size)
+    pass
+

@@ -1,36 +1,26 @@
-import base64
-import os.path
 import random
 import traceback
 from datetime import datetime
-from pathlib import Path
 from pprint import pprint
 from typing import Tuple, Literal
 
-import PIL.Image
+import PIL
 import cv2
 import numpy as np
 from PIL.Image import Image as PILImage
 from PIL.ImageFont import FreeTypeFont
-from loguru import logger
 
-from lv_tools.cores.json_io import load_json_to_dict, save_json
-from lv_tools.cores.poly_ops import order_rectify, point_distance, is_clockwise, rectangle_2_bbox
-from lv_tools.cores.typing_custom import BoundingBox, Points
-from lv_tools.img_tools.img_aug import img_aug
+from lv_tools.cores.poly_ops import order_rectify, point_distance, is_clockwise
+from lv_tools.cores.typing_custom import BoundingBox
+from lv_tools.corpus.text_preprocess import remove_continue_space
 from lv_tools.data_parsing.labelme_json_constructor import construct_one_shape, construct_labelme_jd
-from lv_tools.task_book_info_gen.bg_gen import MimicSpineBg
-from lv_tools.task_book_info_gen.book_info_content import BookSpineContent
-from lv_tools.task_book_info_gen.book_info_template import BookInfoTemplate
-from lv_tools.task_ocr_text_render.text_preprocess import remove_continue_space
 from text_renderer.config import RenderCfg
-from text_renderer.render import Render
+from text_renderer.corpus import Corpus
 from text_renderer.utils.bbox import BBox
 from text_renderer.utils.draw_utils import Imgerror, draw_text_on_bg_hv_no_pad, draw_text_on_bg_backup
-from text_renderer.utils.draw_utils import draw_text_on_bg_multi_line
 from text_renderer.utils.errors import PanicError
-from text_renderer.utils.math_utils import PerspectiveTransform
 from text_renderer.utils.types import FontColor, is_list
+
 
 class BookSpineRender:
     '''
@@ -56,14 +46,11 @@ class BookSpineRender:
                  dst_dir: str):
         # 初始化开销不大
         self.cfg = cfg  # cfg 的问题在于如果没有一个持续维护的文档，时间长了，就不知道这个黑盒子到底携带多少参数了。好处是写代码自由。
-        self.corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
+        self.corpus:Corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
         self._corpus_check()
         self.dst_dir = dst_dir
         self.item = {}
         self.text_orientation = 1  # 0为横向，1为纵向
-
-
-
 
     def _corpus_check(self):
         if is_list(self.corpus) and is_list(self.cfg.corpus_effects):
@@ -79,8 +66,6 @@ class BookSpineRender:
 
         if not is_list(self.corpus) and is_list(self.cfg.corpus_effects):
             raise PanicError("corpus_effects is list, corpus is not list")
-
-
 
     def adeptive_adjust_bbox_size(self, src_points: BoundingBox, dst_patch_size: tuple[float, float]):
         w, h = dst_patch_size
@@ -99,19 +84,10 @@ class BookSpineRender:
 
         src_points = cv2.boxPoints(((cx, cy), (dst_bw, dst_bh), angle))
 
-
         return src_points
 
-    def limit_hw(self, h: int, w: int, target_max_h=1200) -> Tuple[int, int]:
-        h_new = min(target_max_h, h)
-        w_new = max(60, int(h_new * w / h))
-        return h_new, w_new
-
-    def points_resize(self, points: Points, wh_ratio: Tuple) -> Points:
-        return [[int(point[0] * wh_ratio[0]), int(point[1] * wh_ratio[1])] for point in points]
-
     # @retry
-    def __call__(self, template_jd:dict,bg:np.ndarray,item):
+    def __call__(self, template_jd: dict, bg: np.ndarray, item):
         '''
         遍历渲染书脊
         1. 检测框信息包括坐标，文字和文字类别
@@ -123,28 +99,16 @@ class BookSpineRender:
             self.item = item
             # # 核心逻辑
             #
-            h, w = template_jd['imageHeight'], template_jd['imageWidth']
-            # ⭐对目标书籍的大小进行限制，并修改对应json相关信息,掠过索书号，给下一阶段去贴
-            bg_h, bg_w = self.limit_hw(h, w)
-            h_ratio, w_ratio = bg_h / h, bg_w / w
-            new_shapes = []
-
-            for info_index in range(len(template_jd['shapes'])):
-                shape = template_jd['shapes'][info_index]
-                shape['points'] = self.points_resize(shape['points'], (w_ratio, h_ratio))
-                if isinstance(shape.get('group_id'), str) and shape.get('group_id') == '7索书号':
-                    continue
-                new_shapes.append(shape)
-            template_jd['shapes'] = new_shapes
-            template_jd['imageHeight'], template_jd['imageWidth'] = bg_h, bg_w
-
 
             text_len_limit = 1.2
             dst_shapes = []
 
+            bg_h, bg_w = template_jd['imageHeight'], template_jd['imageWidth']
+
             for info_index in range(len(template_jd['shapes'])):
                 info_class = template_jd['shapes'][info_index]['group_id']
-
+                if info_class == '7索书号':
+                    continue
 
                 shape = template_jd['shapes'][info_index]
                 src_points = shape['points']
@@ -193,21 +157,18 @@ class BookSpineRender:
                 # todo lv 单行，混排文本切换开关：oneline，multiline
                 # todo 文本颜色切换
                 cropped_bg, text, M_anti, transformed_text_mask, bbox, font_base = self.gen_one_corpus(
-                    template_jd, info_index, text, bg, write_mode='oneline', cmap='color')
+                    template_jd, info_index, text, bg, write_mode='oneline', cmap='gray')  # 接口有点含混不清，可读性的重要性大于当下接口的便捷性
+
                 img = cropped_bg
 
                 img = img.convert("RGB")
                 np_img = np.array(img)
-                # np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
+
+                white_bg = np.ones_like(np_img, dtype=np.uint8) * 255
                 piece_with_black_pad = cv2.warpPerspective(np_img, M_anti, (bg_w, bg_h))
-
-                _, mask_fg = cv2.threshold(cv2.cvtColor(piece_with_black_pad, cv2.COLOR_BGR2GRAY), 1, 255,
+                white_piece_with_black_pad = cv2.warpPerspective(white_bg, M_anti, (bg_w, bg_h))
+                _, mask_fg = cv2.threshold(cv2.cvtColor(white_piece_with_black_pad, cv2.COLOR_BGR2GRAY), 250, 255,
                                            cv2.THRESH_BINARY)
-
-                kernal = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-                mask_fg = cv2.erode(mask_fg, kernal, iterations=2)
-
-                _, mask_fg = cv2.threshold(mask_fg, 1, 255, cv2.THRESH_BINARY)
 
                 piece_with_black_pad = cv2.bitwise_and(piece_with_black_pad, piece_with_black_pad, mask=mask_fg)
 
@@ -215,14 +176,14 @@ class BookSpineRender:
 
                 bg_with_black_piece = cv2.bitwise_and(bg, bg, mask=mask_bg)
                 bg = cv2.add(piece_with_black_pad, bg_with_black_piece)
-                # np_img = self.norm(np_img)
+
                 bbox_to_bg = cv2.perspectiveTransform(np.array([bbox], np.float32), M_anti)
                 dst_shape = construct_one_shape(label=remove_continue_space(text),
                                                 points=np.squeeze(bbox_to_bg).tolist(), group_id=info_class)
                 dst_shapes.append(dst_shape)
             dst_jd = construct_labelme_jd(dst_shapes, '', bg_h, bg_w)
 
-            return bg,dst_jd
+            return bg, dst_jd
 
         except Exception as e:
             raise Imgerror(e)
@@ -230,10 +191,19 @@ class BookSpineRender:
             # raise e
 
     def gen_one_corpus(self, jd: dict, info_index: int, text: str, bg: np.ndarray,
-                       write_mode: Literal['oneline', 'multiline'] = 'oneline', cmap='color') -> Tuple[
+                       write_mode: Literal['oneline', 'multiline'] = 'oneline', cmap:Literal['color','gray']='color') -> Tuple[
         PILImage, str, PILImage, PILImage]:
 
-        font_text = self.corpus.get_font_text(text)
+        '''
+
+        1. 文本写在白色背景上
+        2. 拿到目标bg切片。
+        3. 根据bg切片适配文本颜色，然后将文本融合到bg切片上。
+
+
+        '''
+
+        font_text= self.corpus.get_font_text(text)
         # 这个bg即是透视模拟出来的书脊，所有文字都投影到这个书脊上
         pil_bg = PIL.Image.fromarray(bg)
         if cmap == 'color':
@@ -244,61 +214,32 @@ class BookSpineRender:
             if self.corpus.cfg.text_color_cfg is not None:
                 text_color = self.corpus.cfg.text_color_cfg.get_color(pil_bg)
         else:
-            # gray_value = random.randint(5, 35)  # 颜色不可以为0，这样影响图像融合的贴图逻辑。
-            gray_value = random.randint(10,12)
-            opac_value = random.randint(245, 255)
-            text_color = (gray_value, gray_value, gray_value, opac_value)
+            gray_value = random.randint(0, 12)
+            alpha = random.randint(245, 255)
+            text_color = (gray_value, gray_value, gray_value, alpha)
         # 书写文本接口,写在透明背景上
-        if write_mode == 'oneline':
-            if self.text_orientation == 1:
-                text_mask, bbox, font_base = draw_text_on_bg_hv_no_pad(
-                    font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                    save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
-                )
-            else:
-                font_text.horizontal = True
-                text_mask, bbox, font_base = draw_text_on_bg_backup(
-                    font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                )
-        elif write_mode == 'multiline':
-            text_mask, bbox, font_base = draw_text_on_bg_multi_line(
+        if self.text_orientation == 1:
+            text_mask, bbox, font_base = draw_text_on_bg_hv_no_pad(
                 font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
                 save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
             )
 
-        # from matplotlib import pyplot as plt
-        # import cv2
-        # text_mask_arr = np.array(text_mask)[...,:3].astype(np.uint8)
-        # ret = cv2.polylines(text_mask_arr, np.array([bbox], np.int32), True, (0, 255, 0), 16)
-        # plt.imshow(ret)
-        # plt.show()
+        else:
+            font_text.horizontal = True
+            text_mask, bbox, font_base = draw_text_on_bg_backup(
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+            )
 
         if self.cfg.corpus_effects is not None:
             text_mask, _ = self.cfg.corpus_effects.apply_effects(
                 text_mask, BBox.from_size(text_mask.size)
             )
 
-        if self.cfg.perspective_transform is not None:
-            transformer = PerspectiveTransform(self.cfg.perspective_transform)
-            # TODO: refactor this, now we must call get_transformed_size to call gen_warp_matrix
-            _ = transformer.get_transformed_size(text_mask.size)
-
-            try:
-                (
-                    transformed_text_mask,
-                    transformed_text_pnts,
-                ) = transformer.do_warp_perspective(text_mask)
-            except Exception as e:
-                logger.exception(e)
-                logger.error(font_text.font_path, "text", font_text.text)
-                raise e
-        else:
-            transformed_text_mask = text_mask
-        # 白背景的字融合到目标背景上
+        transformed_text_mask = text_mask
+        # 白背景的字融合到目标背景上 # todo 这个逻辑应该摘出来
         pers_bg, M_anti = self.paste_text_mask_on_bg_with_M_anti(pil_bg, transformed_text_mask, jd, info_index)
 
         # print(pers_bg.size)
-
 
         return pers_bg, font_text.text, M_anti, transformed_text_mask, bbox, font_base
 
@@ -364,7 +305,6 @@ class BookSpineRender:
         src_points = self.adeptive_adjust_bbox_size(src_points, (piece_w, piece_h))
 
         if not is_clockwise(src_points):
-            # src_points = src_points[:1]+src_points[-1:0:-1] # 这种写法不太符合直觉
             src_points = src_points[:1] + src_points[1:][::-1]
 
         src_points = order_rectify(src_points)
@@ -436,10 +376,7 @@ class CallnumberRender(BookSpineRender):
     #         self.book_info_template_path = book_info_template.get_template_json_path_by_callnumber_part_num(callnumber_num)
     #         break
 
-
-
-
-    def __call__(self, template_jd:dict,bg:np.ndarray,item,limit_h=200) -> Tuple:
+    def __call__(self, template_jd: dict, bg: np.ndarray, item, limit_h=200) -> Tuple:
         '''
         遍历渲染书脊
         1. 检测框信息包括坐标，文字和文字类别
@@ -452,27 +389,26 @@ class CallnumberRender(BookSpineRender):
             # 核心逻辑
 
             dst_shapes = []
-            h, w = template_jd['imageHeight'], template_jd['imageWidth']
-            bg_h, bg_w = self.limit_hw(h, w,limit_h)
-            h_ratio, w_ratio = bg_h / h, bg_w / w
-            new_shapes = []
 
-            for info_index in range(len(template_jd['shapes'])):
+            bg_h, bg_w = template_jd['imageHeight'], template_jd['imageWidth']
 
-                shape = template_jd['shapes'][info_index]
-                shape['points'] = self.points_resize(shape['points'], (w_ratio, h_ratio))
-                new_shapes.append(shape)
-            template_jd['shapes'] = new_shapes
-            template_jd['imageHeight'], template_jd['imageWidth'] = bg_h, bg_w
+            # h, w = template_jd['imageHeight'], template_jd['imageWidth']
+            # bg_h, bg_w = self.limit_hw(h, w, limit_h)
+            # h_ratio, w_ratio = bg_h / h, bg_w / w
+            # new_shapes = []
+            #
+            # for info_index in range(len(template_jd['shapes'])):
+            #     shape = template_jd['shapes'][info_index]
+            #     shape['points'] = points_resize(shape['points'], (w_ratio, h_ratio))
+            #     new_shapes.append(shape)
+            # template_jd['shapes'] = new_shapes
+            # template_jd['imageHeight'], template_jd['imageWidth'] = bg_h, bg_w
 
             for info_index in range(len(template_jd['shapes'])):
                 info_class = template_jd['shapes'][info_index]['group_id']
 
                 shape = template_jd['shapes'][info_index]
                 # src_points = shape['points']
-
-
-
 
                 src_points = shape['points']
                 x_b, y_b, w_b, h_b = cv2.boundingRect(np.array(src_points, np.int32))
@@ -484,7 +420,6 @@ class CallnumberRender(BookSpineRender):
                     [x_b + w_b, y_b + h_b],  # 右下角
                     [x_b, y_b + h_b]  # 左下角
                 ]
-
 
                 # 根据原始框的长宽比，估计原文的文字方向（除非进行了方向标注，或者某种先验佐证，否则就需要这个估算，无法确知）
                 src_w, src_h = point_distance(src_points[0], src_points[1]), point_distance(src_points[1],
@@ -499,13 +434,13 @@ class CallnumberRender(BookSpineRender):
 
                 # todo lv 单行，混排文本切换开关：oneline，multiline
                 cropped_bg, text, M_anti, transformed_text_mask, bbox, font_base = self.gen_one_corpus(
-                    template_jd, info_index, text, bg, write_mode='oneline',cmap='gray')
+                    template_jd, info_index, text, bg, write_mode='oneline', cmap='gray')
                 img = cropped_bg
 
                 img = img.convert("RGB")
                 np_img = np.array(img)
                 # np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
-                white_bg = np.ones_like(np_img,dtype=np.uint8)*255
+                white_bg = np.ones_like(np_img, dtype=np.uint8) * 255
                 piece_with_black_pad = cv2.warpPerspective(np_img, M_anti, (bg_w, bg_h))
                 white_piece_with_black_pad = cv2.warpPerspective(white_bg, M_anti, (bg_w, bg_h))
                 _, mask_fg = cv2.threshold(cv2.cvtColor(white_piece_with_black_pad, cv2.COLOR_BGR2GRAY), 250, 255,
@@ -541,7 +476,7 @@ class CallnumberRender(BookSpineRender):
 
             dst_jd = construct_labelme_jd(dst_shapes, '', bg_h, bg_w)
             # save_json(os.path.join(self.dst_dir, img_base[:-3] + 'json'), dst_jd)
-            return bg,dst_jd
+            return bg, dst_jd
 
         except Exception:
             traceback.print_exc()

@@ -1,5 +1,5 @@
 from typing import Tuple, List, Literal
-
+import random
 import PIL.Image
 import cv2
 import numpy as np
@@ -7,11 +7,11 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 from PIL.ImageFont import FreeTypeFont
 from loguru import logger
-from tenacity import retry
+from tenacity import retry,stop_after_attempt
 
-from costum_utils.img_paste import bg_with_pattern, pattern_generator
 from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
+from text_renderer.corpus import Corpus
 from text_renderer.utils.bbox import BBox
 from text_renderer.utils.draw_utils import Imgerror
 from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv, \
@@ -28,7 +28,7 @@ class Render:
     def __init__(self, cfg: RenderCfg):
         self.cfg = cfg
         self.layout = cfg.layout
-        self.corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
+        self.corpus:Corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
         self._corpus_check()
         self.bg_manager = BgManager(cfg.bg_dir, cfg.pre_load_bg_img)
 
@@ -53,9 +53,9 @@ class Render:
             if self._should_apply_layout():
                 img, text, cropped_bg, transformed_text_mask = self.gen_multi_corpus()
             else:
-                # todo lv 单行，混排文本切换开关：oneline，multiline
+                # todo lv 单行，混排文本切换开关：oneline，multiline 颜色开关也在此
                 img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(
-                    write_mode='oneline')
+                    write_mode='oneline',cmap='color')
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -93,57 +93,28 @@ class Render:
             # logger.exception(e)
             # raise e
 
-    def paste_pattern(self, bg, font_text, pattern_dir=r'D:\lxd_code\OCR_SOURCE\0_filtered_converted_valid_png'):
-        '''
 
-        Parameters
-        ----------
-        bg::PIL
-        font_text
-        pattern_dir
-
-        Returns :
-            bg:PIL
-            pattern_core:PIL
-        -------
-
-        '''
-        # 文字大小估计:文本串的边长的最小值，即文字的高。
-        _, _, text_w, text_h = font_text.font.getbbox(font_text.text)
-        # 文字个数估计
-        x_pattern_pad = 15
-        y_pattern_pad = 25
-
-        text_box = [[2 * text_h - x_pattern_pad, text_h - y_pattern_pad],
-                    [2 * text_h + x_pattern_pad + text_w, text_h - y_pattern_pad],
-                    [2 * text_h + x_pattern_pad + text_w, text_h + text_h + y_pattern_pad],
-                    [2 * text_h - x_pattern_pad, text_h + text_h + y_pattern_pad]]
-        box_xs, box_ys = text_box[0]
-        box_xe, box_ye = text_box[2]
-        gen = pattern_generator(pattern_dir)
-        bg = bg_with_pattern(np.array(bg), gen, text_box)
-        bg = bg[..., :3][..., ::-1]
-        pattern_core = bg[box_ys:box_ye, box_xs:box_xe, :]
-        pattern_core = PIL.Image.fromarray(pattern_core)
-        bg = PIL.Image.fromarray(bg)
-        return bg, pattern_core
-
-    def gen_single_corpus(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline') -> Tuple[PILImage, str, PILImage, PILImage,list,str]:
+    def gen_single_corpus(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',cmap:Literal['color','gray']='color') -> Tuple[PILImage, str, PILImage, PILImage,list,str]:
         font_text = self.corpus.sample()
+
 
         bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
 
-        if with_pattern:
-            bg, pattern_core = self.paste_pattern(bg, font_text)
+        if cmap == 'color':
+            if self.cfg.text_color_cfg is not None:
+                text_color = self.cfg.text_color_cfg.get_color(bg)
+
+            # corpus text_color has higher priority than RenderCfg.text_color_cfg
+            if self.corpus.cfg.text_color_cfg is not None:
+                text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
+
         else:
-            pattern_core = bg
+            gray_value = random.randint(0, 12)
+            alpha = random.randint(245, 255)
+            text_color = (gray_value, gray_value, gray_value, alpha)
 
-        if self.cfg.text_color_cfg is not None:
-            text_color = self.cfg.text_color_cfg.get_color(pattern_core)
 
-        # corpus text_color has higher priority than RenderCfg.text_color_cfg
-        if self.corpus.cfg.text_color_cfg is not None:
-            text_color = self.corpus.cfg.text_color_cfg.get_color(pattern_core)
+
 
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':
@@ -311,14 +282,14 @@ class Render:
 
 class RenderOne(Render):
 
-    @retry
+    @retry(stop=stop_after_attempt(5))
     def __call__(self, text) -> Tuple[np.ndarray, str]:
         try:
             if self._should_apply_layout():
                 img, text, cropped_bg, transformed_text_mask = self.gen_multi_corpus()
             else:
-                # todo lv 单行，混排文本切换开关：oneline，multiline
-                img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(write_mode='oneline',text=text)
+                # todo lv 单行，混排文本切换开关：oneline，multiline  颜色切换开关：书脊渲染和这个有冗余
+                img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(write_mode='oneline',text=text,cmap='gray')
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -354,24 +325,37 @@ class RenderOne(Render):
         except Exception as e:
             raise Imgerror(e)
 
-    def gen_single_corpus(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',text:str='') -> Tuple[
+    def gen_single_corpus(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',text:str='',cmap:Literal['color','gray']='color') -> Tuple[
         PILImage, str, PILImage, PILImage]:
 
         font_text = self.corpus.get_font_text(text)
 
         bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
 
-        if with_pattern:
-            bg, pattern_core = self.paste_pattern(bg, font_text)
+
+        if cmap == 'color':
+            if self.cfg.text_color_cfg is not None:
+                text_color = self.cfg.text_color_cfg.get_color(bg)
+
+            # corpus text_color has higher priority than RenderCfg.text_color_cfg
+            if self.corpus.cfg.text_color_cfg is not None:
+                text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
         else:
-            pattern_core = bg
+            gray_value = random.randint(0, 12)
+            alpha = random.randint(245, 255)
+            text_color = (gray_value, gray_value, gray_value, alpha)
 
-        if self.cfg.text_color_cfg is not None:
-            text_color = self.cfg.text_color_cfg.get_color(pattern_core)
 
-        # corpus text_color has higher priority than RenderCfg.text_color_cfg
-        if self.corpus.cfg.text_color_cfg is not None:
-            text_color = self.corpus.cfg.text_color_cfg.get_color(pattern_core)
+
+
+
+
+        # if self.cfg.text_color_cfg is not None:
+        #     text_color = self.cfg.text_color_cfg.get_color(bg)
+        #
+        # # corpus text_color has higher priority than RenderCfg.text_color_cfg
+        # if self.corpus.cfg.text_color_cfg is not None:
+        #     text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
 
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':
@@ -411,60 +395,3 @@ class RenderOne(Render):
 
         return img, font_text.text, cropped_bg, transformed_text_mask, bbox, font_base
 
-
-    def gen_single_corpus_by_gt(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',text:str='') -> Tuple[
-        PILImage, str, PILImage, PILImage]:
-
-        font_text = self.corpus.get_font_text(text)
-
-        bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
-
-        if with_pattern:
-            bg, pattern_core = self.paste_pattern(bg, font_text)
-        else:
-            pattern_core = bg
-
-        if self.cfg.text_color_cfg is not None:
-            text_color = self.cfg.text_color_cfg.get_color(pattern_core)
-
-        # corpus text_color has higher priority than RenderCfg.text_color_cfg
-        if self.corpus.cfg.text_color_cfg is not None:
-            text_color = self.corpus.cfg.text_color_cfg.get_color(pattern_core)
-
-        # 书写文本接口,写在透明背景上
-        if write_mode == 'oneline':
-            text_mask, bbox, font_base = draw_text_on_bg_hv(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
-            )
-        elif write_mode == 'multiline':
-            text_mask, bbox, font_base = draw_text_on_bg_multi_line(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
-            )
-
-        if self.cfg.corpus_effects is not None:
-            text_mask, _ = self.cfg.corpus_effects.apply_effects(
-                text_mask, BBox.from_size(text_mask.size)
-            )
-
-        if self.cfg.perspective_transform is not None:
-            transformer = PerspectiveTransform(self.cfg.perspective_transform)
-            # TODO: refactor this, now we must call get_transformed_size to call gen_warp_matrix
-            _ = transformer.get_transformed_size(text_mask.size)
-
-            try:
-                (
-                    transformed_text_mask,
-                    transformed_text_pnts,
-                ) = transformer.do_warp_perspective(text_mask)
-            except Exception as e:
-                logger.exception(e)
-                logger.error(font_text.font_path, "text", font_text.text)
-                raise e
-        else:
-            transformed_text_mask = text_mask
-        # 白背景的字融合到目标背景上
-        img, cropped_bg = self.paste_text_mask_on_bg(bg, transformed_text_mask)
-
-        return img, font_text.text, cropped_bg, transformed_text_mask, bbox, font_base

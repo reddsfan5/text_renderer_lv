@@ -5,9 +5,9 @@ import random
 import time
 from pathlib import Path
 
-from costum_utils.text_segmentation import limit_text_and_add_space
-from lv_tools.task_ocr_text_render.series_text import (
-    series_text_gen)
+from lv_tools.corpus.text_preprocess import limit_text_and_add_space
+
+
 from text_renderer.config import (
     RenderCfg,
     GeneratorCfg,
@@ -276,13 +276,14 @@ def emboss():
     )
     return cfg
 
-def text_list_gen(txt_path,is_add_space=True):
+def text_list_gen(txt_path,chr_set,is_add_space=False):
 
     with open(txt_path, mode='r', encoding='utf8') as f:
         # text_list = f.read().split('\n')[:-1] # 直接截掉最后一行，这行通常为空行
         text_list = f.read().split('\n')  # 直接截掉最后一行，这行通常为空行
         # 防止空行
         text_list = [''.join(list(filter(lambda x: x in chr_set, text))) for text in text_list if text]
+        text_list = [text for text in text_list if text]
 
     text_list = limit_text_and_add_space(text_list,is_add_space=is_add_space)
     return text_list
@@ -297,11 +298,7 @@ def data_split_start_end(text_list,part=4,cur_index=0):
 
 
 
-FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
-FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
-FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
-FONT_EN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\手写体')
-FONT_ONE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险\单一字体\1')
+
 
 # 文本统一过滤的必要不大。如果文本过大，大到超出内存限制，这种统一到列表中的做法就不可行了。
 '''
@@ -309,36 +306,54 @@ FONT_ONE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风�
 1. 文本处理，
 '''
 
-len_limit = 200
+len_limit = 30
 # 支持的字符集，用于过滤超纲字符
-with open(r'D:\lxd_code\OCR\OCR_SOURCE\corpus/chn_charset_dict_9735.txt', encoding='utf8', mode='r') as chr:
+with open(r'D:\lxd_code\OCR\OCR_SOURCE\model\spine_rec_v2\bookridge_rec_chn_svtr_240223/chn_kor_jap_fre_rus_spa_ara_latin_23986.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
 # 所有可选的书名、作者名列表。
 
 # 索书号txt
 # txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\anhuidaxue_call_number\anhuidaxue-callnumber_splited.txt'
 # 书名txt
-txt_path = r'D:\lxd_code\OCR\OCR_SOURCE\corpus\bookname\booklibrary_ext_less_25.txt'
 
-text_list = text_list_gen(txt_path = txt_path,is_add_space=False)
+text_path_dict = {
+    'jpp':r'F:\dataset\OCR\图书目录\text\japan\open_source-book_title-japan2.txt',
+    'fre':r'F:\dataset\OCR\图书目录\text\french\french_book_name_author_publisher_valid.txt',
+    'spa':r'F:\dataset\OCR\图书目录\text\Spanish\valid_spanish_drop_dup_cut_long.txt',
+    'rus':r'F:\dataset\OCR\图书目录\text\russian\zlib_russian.txt'
+}
+txt_path =text_path_dict['rus']
+
+text_list = text_list_gen(txt_path = txt_path,chr_set=chr_set,is_add_space=False)
+print('corpus读取完毕')
+
 # start,end = data_split_start_end(text_list)
 # text_list = text_list[start:end]
-NUM_IMG = 2*10**5
+NUM_IMG:int = int(1*10**6)
 # text_list = series_text_gen(data_num=NUM_IMG)
 
 local_time = time.localtime()
 mon, day, hour,minite,sec = local_time.tm_mon, local_time.tm_mday, local_time.tm_hour,local_time.tm_min,local_time.tm_sec
 DST_DIR = Path(fr'D:\dataset\OCR\lmdb_datatest_{mon:02}{day:02}{hour:02}_{minite:02}_{sec:02}')
 # BG_DIR = Path(r'F:\dataset\OCR\callnumber_gen\callnumber_bg')
-# BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
-BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg_texture')
+BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg')
+# BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg\bg_white')
 CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
 
-
-
+FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
+FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
+FONT_HARD = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\超个性-存在简体繁体混合使用\超个性-已更新')
+FONT_EN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\手写体')
+FONT_ONE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险\单一字体\1')
+FONT_NORMAL = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险\常规类_已更正')
+FONT_KOREA= Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\韩文')
+FONT_JAPAN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\日文\ttf-notdef')
+FONT_FR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\jinke_miaomu_done\en_fr_jinke_miaomu_done')
+FONT_SPA_EN_FRE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\jinke_miaomu_done\en_fr_jinke_miaomu_done\eng_fre_spa')
+FONT_RUS = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\俄文\70-potryasayushhix-kirillicheskix-russkix-shriftov\selected')
 font_cfg = dict(
-    font_dir=FONT_ONE,
-    font_size=(38, 39),# 34,36
+    font_dir=FONT_SPA_EN_FRE,
+    font_size=(30, 34),# 34,36
     # sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
 
 )
@@ -379,6 +394,7 @@ if vertical:
     configs = []
     for cfg1 in cfgs:
         cfg1.render_cfg.corpus[0].cfg.horizontal = False
+        cfg1.render_cfg.corpus[0].cfg.clip_length=20
         configs.append(cfg1)
 else:
     configs = [

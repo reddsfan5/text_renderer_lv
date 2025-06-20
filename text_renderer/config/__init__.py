@@ -103,6 +103,19 @@ class FixedTextColorCfg(TextColorCfg):
         text_color = (self.r, self.g, self.b, random.randint(*self.alpha))
         return text_color
 
+@dataclass
+class GrayStyleCfg(TextColorCfg):
+    '''
+    color: black ,gray
+    '''
+    def get_color(self, bg_img: PILImage) -> Tuple[int, int, int, int]:
+        gray_value = random.randint(0, 12)
+        alpha = random.randint(245, 255)
+        text_color = (gray_value, gray_value, gray_value, alpha)
+        return text_color
+
+
+
 
 @dataclass
 class SafeTextColorCfg(TextColorCfg):
@@ -130,9 +143,10 @@ class SafeTextColorCfg(TextColorCfg):
         '''
         # 涉及到数据环的，取余去解决。
         color_h, color_s, color_v = colorsys.rgb_to_hsv(*(mean / 255).tolist())
-        anti_h = (color_h - random.uniform(.4, .6)) % 1
-        anti_s = random.uniform(.3, 1.0)
-        anti_v = (color_v - random.uniform(.4, .6)) % 1
+
+        anti_h = (color_h - random.uniform(.35, .65)) % 1
+        anti_s = random.uniform(.7, 1.0) # 【灰色-> 彩色】
+        anti_v = random.uniform(.6, 1.0) # 【暗色-> 亮色】亮彩在视觉上，就是彩色，暗彩发黑
 
         anti_r, anti_g, anti_b = (np.array(colorsys.hsv_to_rgb(anti_h, anti_s, anti_v)) * 255).astype(np.uint8).tolist()
 
