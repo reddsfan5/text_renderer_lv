@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from PIL.ImageFont import FreeTypeFont
+from fontTools.ttLib import ttFont
 
 
 @dataclass
@@ -40,3 +41,16 @@ class FontText:
             width = max(widths)
             height = sum([self.font.getsize(c)[1] for c in self.text]) - self.font.getoffset(self.text[0])[1]
             return height, width
+if __name__ == '__main__':
+
+    from PIL import ImageFont
+
+    font = FreeTypeFont(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\藏文\ctrc-betsu.ttf', 100)
+    fonttext = FontText(font,'སྲུང་སྐྱོང་།ལུང་ཧྲེང་ཧྭ་འགྱིག་སོགས་ཁེ་ལས་ལ་བཅར་འདྲི',r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\藏文\ctrc-betsu.ttf')
+
+
+
+
+    print(fonttext.size)
+    print(fonttext.xy)
+    print(fonttext.offset)

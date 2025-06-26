@@ -15,7 +15,8 @@ from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from PIL import Image as PILImage
 from lv_tools.cores.poly_ops import rectangle2points
-from lv_tools.cores.str_utils import rand_str, is_need_rotate
+from lv_tools.cores.str_utils import rand_str
+from lv_tools.str_utils.text_rotate import is_need_rotate
 from lv_tools.data_parsing.alva_json_ops import get_book_spines_from_jd
 from lv_tools.data_parsing.labelme_json_constructor import construct_labelme_jd
 from lv_tools.dataset_io.data_loader import ImgArrayJDLoader, ImgJsonLoader

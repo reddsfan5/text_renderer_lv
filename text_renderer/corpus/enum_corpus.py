@@ -72,33 +72,13 @@ class EnumCorpus(Corpus):
                     self.cfg.filter_font_min_support_chars
                 )
 
-    def random_sample_text(self,
-                           chn_charset_path: str = r'chn_charset_dict_8k.txt',
-                           text_file_path: str = r'text_100.txt'
-                           ) -> typing.Generator:
-        if not self.texts:
-            with open(chn_charset_path, encoding='utf8',mode='r') as chr:
-                chr_set = set(chr.read().split('\n'))
-            with open(text_file_path, mode='r', encoding='utf8') as f:
-                for line in f:
-                    text = line.split('\n')
-                    if not text:
-                        continue
-                    # 防止空行
-                    text = ''.join(list(filter(lambda x: x in chr_set, text)))
-                    yield text
 
     def get_text(self) -> str:
-        text = '文本占位'
-        # todo lvxiaodong
-        if not self.texts:
-            self.texts = self.random_sample_text()
-        # 文本遍历模式
-        if isinstance(self.texts, list):
-            text = self.texts.pop()
 
-        return self.cfg.join_str.join(text)
-        # todo watch text info
-        # print(text)
-        # text = random_choice(self.texts, self.cfg.num_pick)
+        # 文本遍历模式
+        if self.texts:
+            text = self.texts.pop()
+            text  = self.cfg.join_str.join(text)
+            return self.remove_punctuation(text)
+        raise ValueError("texts is empty")
 

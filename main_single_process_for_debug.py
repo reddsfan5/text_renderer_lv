@@ -117,12 +117,12 @@ if __name__ == "__main__":
         )
         process_setup(generator_cfg.render_cfg)
         for i in range(generator_cfg.num_image):
-            ret = generate_img('gfhgfhfghfghfgh')
-            from matplotlib import pyplot as plt
+            ret = generate_img('སྲུང་སྐྱོང་།ལུང་ཧྲེང་ཧྭ་འགྱིག་སོགས་ཁེ་ལས་ལ་བཅར་འདྲི')
+            # from matplotlib import pyplot as plt
 
-            bbox = ret['bbox']
-            (xs, ys), (xe, ye) = bbox[0], bbox[2]
-
-            plt.imshow(ret['image'][ys:ye, xs:xe, :])
-            plt.show()
+            # bbox = ret['bbox']
+            # (xs, ys), (xe, ye) = bbox[0], bbox[2]
+            #
+            # plt.imshow(ret['image'][ys:ye, xs:xe, :])
+            # plt.show()
             db_writer_process.gen_data(ret)

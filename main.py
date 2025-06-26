@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
     # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
     data_queue = manager.Queue()
-    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
+    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 0 --log_period 2'.split(' ')
 
     if not sys.argv[1:]:
         args = parse_args(arg_list)

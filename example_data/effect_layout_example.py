@@ -308,7 +308,7 @@ def data_split_start_end(text_list,part=4,cur_index=0):
 
 len_limit = 30
 # 支持的字符集，用于过滤超纲字符
-with open(r'D:\lxd_code\OCR\OCR_SOURCE\model\spine_rec_v2\bookridge_rec_chn_svtr_240223/chn_kor_jap_fre_rus_spa_ara_latin_23986.txt', encoding='utf8', mode='r') as chr:
+with open(r'D:\lxd_code\OCR\OCR_SOURCE\model\spine_rec_v2\bookridge_rec_chn_svtr_240223/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt', encoding='utf8', mode='r') as chr:
     chr_set = set(chr.read().split('\n'))
 # 所有可选的书名、作者名列表。
 
@@ -320,16 +320,17 @@ text_path_dict = {
     'jpp':r'F:\dataset\OCR\图书目录\text\japan\open_source-book_title-japan2.txt',
     'fre':r'F:\dataset\OCR\图书目录\text\french\french_book_name_author_publisher_valid.txt',
     'spa':r'F:\dataset\OCR\图书目录\text\Spanish\valid_spanish_drop_dup_cut_long.txt',
-    'rus':r'F:\dataset\OCR\图书目录\text\russian\zlib_russian.txt'
+    'rus':r'F:\dataset\OCR\图书目录\text\russian\zlib_russian.txt',
+    'tib':r'F:\dataset\OCR\图书目录\text\tibetan\n-bo_normed_mini.txt'
 }
-txt_path =text_path_dict['rus']
+txt_path =text_path_dict['tib']
 
 text_list = text_list_gen(txt_path = txt_path,chr_set=chr_set,is_add_space=False)
 print('corpus读取完毕')
 
 # start,end = data_split_start_end(text_list)
 # text_list = text_list[start:end]
-NUM_IMG:int = int(1*10**6)
+NUM_IMG:int = int(8*10**2)
 # text_list = series_text_gen(data_num=NUM_IMG)
 
 local_time = time.localtime()
@@ -351,8 +352,9 @@ FONT_JAPAN = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\日文\ttf-notdef')
 FONT_FR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\jinke_miaomu_done\en_fr_jinke_miaomu_done')
 FONT_SPA_EN_FRE = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\jinke_miaomu_done\en_fr_jinke_miaomu_done\eng_fre_spa')
 FONT_RUS = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\俄文\70-potryasayushhix-kirillicheskix-russkix-shriftov\selected')
+FONT_TIB = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\藏文')
 font_cfg = dict(
-    font_dir=FONT_SPA_EN_FRE,
+    font_dir=FONT_TIB,
     font_size=(30, 34),# 34,36
     # sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
 
@@ -394,7 +396,7 @@ if vertical:
     configs = []
     for cfg1 in cfgs:
         cfg1.render_cfg.corpus[0].cfg.horizontal = False
-        cfg1.render_cfg.corpus[0].cfg.clip_length=20
+        cfg1.render_cfg.corpus[0].cfg.clip_length=2000
         configs.append(cfg1)
 else:
     configs = [

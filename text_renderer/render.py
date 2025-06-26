@@ -27,7 +27,6 @@ from text_renderer.utils.utils import random_xy_offset
 class Render:
     def __init__(self, cfg: RenderCfg):
         self.cfg = cfg
-        self.layout = cfg.layout
         self.corpus:Corpus = cfg.corpus[0] if isinstance(cfg.corpus, list) and len(cfg.corpus) == 1 else cfg.corpus
         self._corpus_check()
         self.bg_manager = BgManager(cfg.bg_dir, cfg.pre_load_bg_img)
@@ -183,7 +182,7 @@ class Render:
             text_masks.append(text_mask)
             text_bboxes.append(text_bbox)
 
-        text_mask_bboxes, merged_text = self.layout(
+        text_mask_bboxes, merged_text = self.cfg.layout(
             font_texts,
             [it.copy() for it in text_bboxes],
             [BBox.from_size(it.size) for it in text_masks],

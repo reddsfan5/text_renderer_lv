@@ -225,7 +225,7 @@ from lv_tools.lmdbs.visualize import visualization_some_sample
 
 if __name__ == '__main__':
     visualization_some_sample(
-        r'D:\dataset\OCR\lmdb_datatest_062010_44_30\effect_layout_image\effect_ensembleauthor')
+        r'D:\dataset\OCR\lmdb_datatest_062520_37_00\effect_layout_image\effect_ensembleauthor')
 
     # cvt_data()
     # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')

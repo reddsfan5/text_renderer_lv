@@ -103,7 +103,7 @@ class Corpus:
                 f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
             )
             # todo lvixaodong font check
-            with open(r'E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+            with open(r'D:\lxd_code\OCR\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
                 f.write(f'{font_path} {text}')
                 f.write('\n')
             logger.debug(err_msg)
