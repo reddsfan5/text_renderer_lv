@@ -34,6 +34,76 @@ def transparent_img(size: Tuple[int, int]) -> PILImage:
     return Image.new("RGBA", (size[0], size[1]), (255, 255, 255, 0))
 
 
+
+def draw_text_on_bg_one_line(
+        font_text: FontText,
+        text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
+        char_spacing: Union[float, Tuple[float, float]] = -1,
+        save_dir: str = ''
+) -> Tuple[PILImage, list, str]:
+    """
+
+    Parameters
+    ----------
+    font_text : FontText
+    text_color : RGBA
+        Default is black
+    char_spacing : Union[float, Tuple[float, float]]
+        Draw character with spacing. If tuple, random choice between [min, max)
+        Set -1 to disable
+
+    Returns
+    -------
+        PILImage:
+            RGBA Pillow image with text on a transparent image
+    -------
+
+    """
+
+    char_spacings = []
+
+    multi_line = font_text.text
+    cs_height = font_text.size[1]
+    for i in range(len(font_text.text)):
+        if isinstance(char_spacing, list) or isinstance(char_spacing, tuple):
+            s = np.random.uniform(*char_spacing)
+            char_spacings.append(int(s * cs_height))
+        else:
+            char_spacings.append(int(char_spacing * cs_height))
+
+    # 计算文本尺寸
+    bbox = ImageDraw.Draw(Image.new('RGB', (1, 1))).multiline_textbbox((0, 0), multi_line, font=font_text.font)
+    width, height = bbox[2] - bbox[0], bbox[3] - bbox[0]
+    margin = min(width, height)  # 文本周围留白的像素
+
+    text_mask = transparent_img((width + 2 * margin, height + 2 * margin))
+    # 四周的padding 平均一个height。
+    # pre_img = copy.deepcopy(text_mask)
+    draw = ImageDraw.Draw(text_mask)
+    # draw.multiline_text((margin, margin), multi_line, font=font_text.font, fill=text_color)
+    draw.text((margin, margin), multi_line, font=font_text.font, fill=text_color)
+    # text_mask = text_mask.rotate(90, expand=True)
+    pre_img = np.array(text_mask)[..., :3]
+    points = np.argwhere(pre_img < 255)
+    xmin = np.min(points[:, 1])
+    ymin = np.min(points[:, 0])
+    xmax = np.max(points[:, 1])
+    ymax = np.max(points[:, 0])
+    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
+    if save_dir:
+        if not osp.exists(save_dir):
+            os.mkdir(save_dir)
+
+        # 存储用于字体展示
+        text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
+
+    # bbox = [[x_start, y_start], [x_start + sum(heights), y_start], [x_start + sum(heights), y_start + max(widths)],
+    #         [x_start, y_start + max(widths)]]
+    bbox = box_n.tolist()
+    font_base = osp.basename(font_text.font_path)
+
+    return text_mask, bbox, font_base
+
 def draw_text_on_bg_hv(
         font_text: FontText,
         text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
@@ -73,7 +143,13 @@ def draw_text_on_bg_hv(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        # size = font_text.font.getsize(c)
+        bbox = font.getbbox(c)       # 返回边界框 (left, top, right, bottom)
+        size = bbox[2] - bbox[0],bbox[3] - bbox[1] 
+
+
+
+
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -219,7 +295,9 @@ def draw_text_on_bg_hv_no_pad(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        # size = font_text.font.getsize(c)
+        bbox = font.getbbox(c)       # 返回边界框 (left, top, right, bottom)
+        size = bbox[2] - bbox[0],bbox[3] - bbox[1] 
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -429,7 +507,9 @@ def draw_text_on_bg(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        # size = font_text.font.getsize(c)
+        bbox = font.getbbox(c)       # 返回边界框 (left, top, right, bottom)
+        size = bbox[2] - bbox[0],bbox[3] - bbox[1] 
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -535,7 +615,9 @@ def draw_text_on_bg_backup(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        # size = font_text.font.getsize(c)
+        bbox = font.getbbox(c)       # 返回边界框 (left, top, right, bottom)
+        size = bbox[2] - bbox[0],bbox[3] - bbox[1] 
         chars_size.append(size)
         widths.append(size[0])
         heights.append(size[1])

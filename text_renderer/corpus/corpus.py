@@ -1,6 +1,6 @@
 import os
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from pathlib import Path
 from typing import Tuple, Union
 import re
@@ -44,7 +44,7 @@ class CorpusCfg:
     font_list_file: Path = None
     clip_length: int = -1
     char_spacing: Union[float, Tuple[float, float]] = -1
-    text_color_cfg: TextColorCfg = SafeTextColorCfg()
+    text_color_cfg: TextColorCfg = field(default_factory=SafeTextColorCfg)
     horizontal: bool = True
 
     def __init_subclass__(cls, **kwargs):
@@ -103,10 +103,10 @@ class Corpus:
                 f"{self.__class__.__name__} {font_path} not support chars: {intersect}"
             )
             # todo lvixaodong font check
-            with open(r'D:\lxd_code\OCR\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
-                f.write(f'{font_path} {text}')
-                f.write('\n')
-            logger.debug(err_msg)
+            # with open(r'D:\lxd_code\OCR\OCR_SOURCE\font/font_not_suport_0707.txt',mode='a+',encoding='utf8') as f:
+            #     f.write(f'{font_path} {text}')
+            #     f.write('\n')
+            # logger.debug(err_msg)
             raise RetryError(err_msg)
 
         return FontText(font, text, font_path, self.cfg.horizontal)

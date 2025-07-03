@@ -8,6 +8,7 @@ from PIL.Image import Image as PILImage
 from PIL.ImageFont import FreeTypeFont
 from loguru import logger
 from tenacity import retry,stop_after_attempt
+import traceback
 
 from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
@@ -15,7 +16,7 @@ from text_renderer.corpus import Corpus
 from text_renderer.utils.bbox import BBox
 from text_renderer.utils.draw_utils import Imgerror
 from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv, \
-    draw_text_on_bg_multi_line
+    draw_text_on_bg_multi_line,draw_text_on_bg_one_line
 from text_renderer.utils.errors import PanicError
 from text_renderer.utils.font_text import FontText
 from text_renderer.utils.math_utils import PerspectiveTransform
@@ -88,6 +89,7 @@ class Render:
             return np_img, text, bbox, font_base
 
         except Exception as e:
+            traceback.printexc()
             raise Imgerror(e)
             # logger.exception(e)
             # raise e
@@ -117,14 +119,18 @@ class Render:
 
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':
-            text_mask, bbox, font_base = draw_text_on_bg_hv(
+            text_mask, bbox, font_base = draw_text_on_bg_one_line(
                 font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                save_dir='/home/ubuntu/lxd/OCR_SOURCE/font_show'
             )
+            # text_mask, bbox, font_base = draw_text_on_bg_hv(
+            #     font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+            #     save_dir=r'/home/ubuntu/lxd/OCR_SOURCE/font_show'
+            # )
         elif write_mode == 'multiline':
             text_mask, bbox, font_base = draw_text_on_bg_multi_line(
                 font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                save_dir='/home/ubuntu/lxd/OCR_SOURCE/font_show'
             )
 
         if self.cfg.corpus_effects is not None:
