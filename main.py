@@ -6,7 +6,7 @@ import traceback
 from multiprocessing import Value
 from multiprocessing.context import Process
 import sys
-sys.path.append('D:\lxd_code\lv_tools\src')
+sys.path.append('D:/lxd_code/lv_tools/src')
 import cv2
 from loguru import logger
 
@@ -117,21 +117,18 @@ if __name__ == "__main__":
     '''
     # 代码都是针对写入lmdb 的逻辑进行改写的，没有维护写入img的逻辑，所以在写入img时，会报错。
     
-    --config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config ./example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2
     
-    --config .\example_data/example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config ./example_data/example.py --dataset lmdb --num_processes 1 --log_period 2
     '''
     r'''
     当前困惑：不支持字体是如何使程序的计数出现问题，导致 data_queue.put(STOP_TOKEN) 没有执行的。
     
-    40 extra bytes in post.stringData array:
+    40 extra bytes in post.stringData apiprray:
     
     This problem is reported by fontTools, and it seems to be caused to a font file containing extra data. 
     It’s just a warning, so if your PDF document doesn’t have any errors, you can safely ignore it.
-    
-    
-    font show: E:\lxd\OCR_project\OCR_SOURCE\font\font_show
-    font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
+
     '''
 
     mp.set_start_method("spawn", force=True)
@@ -139,7 +136,9 @@ if __name__ == "__main__":
     # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
     # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
     data_queue = manager.Queue()
-    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 0 --log_period 2'.split(' ')
+    
+
+    arg_list = '--config /home/ubuntu/lxd/text_renderer_lv/example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
 
     if not sys.argv[1:]:
         args = parse_args(arg_list)
