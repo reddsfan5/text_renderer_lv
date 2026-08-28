@@ -110,6 +110,31 @@ def collect_character_statistics(lmdb_path: Path):
     return sorted_counts, sample_count, storage_format
 
 
+def collect_text_character_statistics(text_path: Path):
+    """Return sorted character counts for a UTF-8 text file."""
+    if not text_path.is_file():
+        raise FileNotFoundError("TXT 路径不存在: {}".format(text_path))
+
+    counter = Counter()
+    line_count = 0
+    with text_path.open(encoding="utf-8-sig") as file:
+        for line in tqdm(
+            file,
+            desc="TXT",
+            unit="line",
+            dynamic_ncols=True,
+            ascii=True,
+        ):
+            counter.update(line.rstrip("\r\n"))
+            line_count += 1
+
+    sorted_counts = sorted(
+        counter.items(),
+        key=lambda item: (-item[1], item[0]),
+    )
+    return sorted_counts, line_count, "text_utf8"
+
+
 def collect_labelme_coverage(labelme_dir: Path, training_characters):
     """Check whether every character in LabelMe labels exists in the LMDB."""
     if not labelme_dir.is_dir():
@@ -221,8 +246,11 @@ def load_statistics(statistics_path: Path):
             ((character, int(count)) for character, count in sorted_counts),
             key=lambda item: (-item[1], item[0]),
         )
-        lmdb_path = Path(result["lmdb_path"])
-        sample_count = int(result["sample_count"])
+        source_path_value = result.get("lmdb_path") or result.get("text_path")
+        if not source_path_value:
+            raise KeyError("lmdb_path/text_path")
+        source_path = Path(source_path_value)
+        sample_count = int(result.get("sample_count", result.get("line_count")))
         storage_format = result["storage_format"]
     except (
         OSError,
@@ -236,7 +264,7 @@ def load_statistics(statistics_path: Path):
             "无法读取字符统计 JSON: {}".format(statistics_path)
         ) from error
 
-    return lmdb_path, sorted_counts, sample_count, storage_format
+    return source_path, sorted_counts, sample_count, storage_format
 
 
 def write_statistics(
@@ -252,6 +280,38 @@ def write_statistics(
         "lmdb_path": str(lmdb_path.resolve()),
         "storage_format": storage_format,
         "sample_count": sample_count,
+        "total_character_count": sum(count for _, count in sorted_counts),
+        "unique_character_count": len(sorted_counts),
+        "character_counts": {
+            character: count
+            for character, count in sorted_counts
+        },
+        "characters": [
+            {"character": character, "count": count}
+            for character, count in sorted_counts
+        ],
+    }
+    if labelme_coverage is not None:
+        result["labelme_coverage"] = labelme_coverage
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as file:
+        json.dump(result, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+
+
+def write_text_statistics(
+    output_path: Path,
+    text_path: Path,
+    sorted_counts,
+    line_count: int,
+    labelme_coverage=None,
+) -> None:
+    """Write ordered UTF-8 text statistics and optional LabelMe coverage."""
+    result = {
+        "text_path": str(text_path.resolve()),
+        "storage_format": "text_utf8",
+        "line_count": line_count,
         "total_character_count": sum(count for _, count in sorted_counts),
         "unique_character_count": len(sorted_counts),
         "character_counts": {
@@ -288,6 +348,11 @@ def main() -> None:
         help="读取已有统计 JSON，跳过 LMDB 扫描",
     )
     parser.add_argument(
+        "--text-file",
+        type=Path,
+        help="统计 UTF-8 TXT 文件中的字符，按行读取并显示进度条",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -300,20 +365,39 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if (args.lmdb_path is None) == (args.statistics_json is None):
-        parser.error("必须且只能指定 lmdb_path 或 --statistics-json")
+    source_count = sum(
+        value is not None
+        for value in (args.lmdb_path, args.statistics_json, args.text_file)
+    )
+    if source_count != 1:
+        parser.error(
+            "必须且只能指定 lmdb_path、--statistics-json 或 --text-file 其中之一"
+        )
 
+    text_path = None
     if args.statistics_json is not None:
         statistics_path = args.statistics_json.resolve()
         (
-            lmdb_path,
+            source_path,
             sorted_counts,
             sample_count,
             storage_format,
         ) = load_statistics(statistics_path)
+        lmdb_path = None
+        text_path = source_path if storage_format == "text_utf8" else None
+    elif args.text_file is not None:
+        statistics_path = None
+        text_path = args.text_file.resolve()
+        (
+            sorted_counts,
+            sample_count,
+            storage_format,
+        ) = collect_text_character_statistics(text_path)
+        lmdb_path = None
     else:
         statistics_path = None
         lmdb_path = args.lmdb_path.resolve()
+        text_path = None
         (
             sorted_counts,
             sample_count,
@@ -325,6 +409,10 @@ def main() -> None:
         if statistics_path is not None:
             output_path = statistics_path.with_name(
                 "{}_with_coverage.json".format(statistics_path.stem)
+            )
+        elif text_path is not None:
+            output_path = text_path.with_name(
+                "{}_char_counts.json".format(text_path.stem)
             )
         else:
             output_path = lmdb_path.parent / "{}_char_counts.json".format(
@@ -339,17 +427,26 @@ def main() -> None:
             args.labelme_dir.resolve(),
             {character for character, _ in sorted_counts},
         )
-    write_statistics(
-        output_path,
-        lmdb_path,
-        sorted_counts,
-        sample_count,
-        storage_format,
-        labelme_coverage,
-    )
+    if text_path is not None:
+        write_text_statistics(
+            output_path,
+            text_path,
+            sorted_counts,
+            sample_count,
+            labelme_coverage,
+        )
+    else:
+        write_statistics(
+            output_path,
+            lmdb_path,
+            sorted_counts,
+            sample_count,
+            storage_format,
+            labelme_coverage,
+        )
 
     print("统计完成: {}".format(output_path))
-    print("样本数: {}".format(sample_count))
+    print("样本数/行数: {}".format(sample_count))
     print("字符总数: {}".format(sum(count for _, count in sorted_counts)))
     print("不同字符数: {}".format(len(sorted_counts)))
     if labelme_coverage is not None:
