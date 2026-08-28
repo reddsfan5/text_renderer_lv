@@ -229,39 +229,6 @@ class LmdbSaver(LmdbSaverBase):
                     f.write(json.dumps(data))
 
 
-# class LmdbSaverPool(LmdbSaver,Process):
-#     stop_token = "kill"
-#
-#     def run(self):
-#         num_image = self.generator_cfg.num_image
-#         save_dir = self.generator_cfg.save_dir
-#         log_period = max(1, int(self.log_period / 100 * num_image))
-#         try:
-#             with self.dataset_cls(str(save_dir)) as db:
-#                 exist_count = db.read_count()
-#                 count = 0
-#
-#                 while True:
-#                     m = self.data_queue.get()
-#                     if m == stop_token:
-#                         logger.info("DBWriterProcess receive stop token")
-#                         break
-#
-#                     name = "{:09d}".format(exist_count + count)
-#                     db.write('id-' + name, m["image"], m["label"], m["bbox"])
-#                     count += 1
-#                     if count % log_period == 0:
-#                         logger.info(
-#                             f"{(count / num_image) * 100:.2f}%({count}/{num_image}) {log_period / (time.time() - start + 1e-8):.1f} img/s"
-#                         )
-#                         start = time.time()
-#                 db.write_count(count + exist_count)
-#                 logger.info(f"{(count / num_image) * 100:.2f}%({count}/{num_image})")
-#                 logger.info(f"Finish generate: {count}. Total: {exist_count + count}")
-#         except Exception as e:
-#             logger.exception("DBWriterProcess error")
-#             raise e
-
 
 if __name__ == '__main__':
 

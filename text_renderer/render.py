@@ -13,7 +13,7 @@ from text_renderer.bg_manager import BgManager
 from text_renderer.config import RenderCfg
 from text_renderer.corpus import Corpus
 from text_renderer.utils.bbox import BBox
-from text_renderer.utils.draw_utils import Imgerror
+from text_renderer.utils.draw_utils import Imgerror, draw_text_on_bg_one_line
 from text_renderer.utils.draw_utils import draw_text_on_bg, transparent_img, draw_text_on_bg_hv, \
     draw_text_on_bg_multi_line
 from text_renderer.utils.errors import PanicError
@@ -54,7 +54,7 @@ class Render:
             else:
                 # todo lv 单行，混排文本切换开关：oneline，multiline 颜色开关也在此
                 img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(
-                    write_mode='oneline',cmap='color')
+                    write_mode='oneline',cmap='gray')
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -117,6 +117,10 @@ class Render:
 
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':
+            # text_mask, bbox, font_base = draw_text_on_bg_one_line(
+            #     font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
+            #     save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+            # )
             text_mask, bbox, font_base = draw_text_on_bg_hv(
                 font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
                 save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'

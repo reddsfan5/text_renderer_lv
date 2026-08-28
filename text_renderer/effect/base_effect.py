@@ -2,7 +2,7 @@ import random
 from abc import abstractmethod
 from typing import List, Union, Tuple
 
-from PIL import PyAccess
+# from PIL import PyAccess
 
 from text_renderer.effect.selector import Selector
 from text_renderer.utils.bbox import BBox

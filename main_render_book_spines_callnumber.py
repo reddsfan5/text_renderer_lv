@@ -13,7 +13,7 @@ from lv_tools.cores.json_io import load_json_to_dict, save_json
 from lv_tools.cores.str_utils import rand_str
 from lv_tools.data_parsing.labelme_json_ops import json_points_resize
 from lv_tools.img_tools.bg_gen import BgGener
-from lv_tools.img_tools.img_resize import limit_hw
+from lv_tools.img_tools.img_resize import HLimiter
 from lv_tools.img_tools.rotate_box import rotate_image_arr_and_polygons
 from lv_tools.task_book_info_gen.book_info_content import BookSpineContent
 from lv_tools.task_book_info_gen.book_info_template import BookInfoTemplate
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     dst_dir = r'F:\dataset\OCR\3-2.book_info_classes\data_callnumber\250110'
     callnumber_bg_mimicer = BgGener(bg_dir)
     callnumber_template = BookInfoTemplate(callnumber_temp_json_path)
-    book_spine_content = BookSpineContent(callnumber_excel_path, callnumber_max_len=2)
+    book_spine_content = BookSpineContent(callnumber_excel_path, callnumber_max_len=3)
 
     generator_cfg = get_cfg(config_path)[0]
 
@@ -55,8 +55,9 @@ if __name__ == '__main__':
             template_jd = load_json_to_dict(book_info_template_path)
 
             h, w = template_jd['imageHeight'], template_jd['imageWidth']
+            size_handdle = HLimiter((h,w),max_h=limit_h)
 
-            bg_h, bg_w = limit_hw(h, w, target_max_h=limit_h)
+            bg_h, bg_w = size_handdle.resize_ann((h, w))
             json_points_resize(template_jd, (bg_h, bg_w))
 
             bg = callnumber_bg_mimicer((bg_h, bg_w))

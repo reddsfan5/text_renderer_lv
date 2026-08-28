@@ -117,7 +117,7 @@ if __name__ == "__main__":
         )
         process_setup(generator_cfg.render_cfg)
         for i in range(generator_cfg.num_image):
-            ret = generate_img('སྲུང་སྐྱོང་།ལུང་ཧྲེང་ཧྭ་འགྱིག་སོགས་ཁེ་ལས་ལ་བཅར་འདྲི')
+            ret = generate_img('ク20ユ')
             # from matplotlib import pyplot as plt
 
             # bbox = ret['bbox']

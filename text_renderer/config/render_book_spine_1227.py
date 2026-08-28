@@ -16,12 +16,11 @@ from loguru import logger
 from lv_tools.cores.json_io import load_json_to_dict, save_json
 from lv_tools.cores.poly_ops import order_rectify, point_distance, is_clockwise
 from lv_tools.cores.typing_custom import BoundingBox, Points
+from lv_tools.corpus.text_preprocess import remove_continue_space
 from lv_tools.img_tools.img_aug import img_aug
-from lv_tools.json_tools.labelme_json_constructor import construct_one_shape, construct_labelme_jd
-from lv_tools.task_book_info_gen.bg_gen import MimicSpineBg
+from lv_tools.data_parsing.labelme_json_constructor import construct_one_shape, construct_labelme_jd
 from lv_tools.task_book_info_gen.book_info_content import BookSpineContent
 from lv_tools.task_book_info_gen.book_info_template import BookInfoTemplate
-from lv_tools.task_ocr_text_render.text_preprocess import remove_continue_space
 from text_renderer.config import RenderCfg
 from text_renderer.render import Render
 from text_renderer.utils.bbox import BBox

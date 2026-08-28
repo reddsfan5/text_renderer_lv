@@ -15,7 +15,7 @@
 # class Visualize(object):
 #     font_dict = {'ch':'simhei.ttf',
 #                  'kr':'Gumi Romance.ttf',
-#                  'jp':'sarasa-mono-slab-k-semibold.ttf'}
+#                  'jp':'日文-sarasa-mono-slab-k-semibold.ttf'}
 #
 #     def __init__(self, dir='e:/temp/',lan:Literal['ch','en','kr','jp']='ch'):
 #         self.dir = dir
@@ -69,7 +69,7 @@
 #         txt_img = Image.fromarray(txt_img)  # np.uint8(txt_img))
 #         draw = ImageDraw.Draw(txt_img)
 #         # font = ImageFont.truetype('/'.join(__file__.split('/')[:-1]) + "/simhei.ttf", size=15)  # simkai.ttf
-#         # font = ImageFont.truetype('/'.join(__file__.split('\\')[:-1]) + "/Gumi Romance.ttf", size=15)  # simkai.ttf,WantedSans-Medium.ttf
+#         # font = ImageFont.truetype('/'.join(__file__.split('\\')[:-1]) + "/Gumi Romance.ttf", size=15)  # simkai.ttf,韩文-WantedSans-Medium.ttf
 #         draw.text((0, 0), label, fill=(0, 200, 200), font=self.font)
 #         txt_img = np.array(txt_img)
 #         img = np.concatenate([img, txt_img], axis=0)  # in h
@@ -225,8 +225,7 @@ from lv_tools.lmdbs.visualize import visualization_some_sample
 
 if __name__ == '__main__':
     visualization_some_sample(
-        r'D:\dataset\OCR\lmdb_datatest_062520_37_00\effect_layout_image\effect_ensembleauthor')
-
+        r'F:\dataset\OCR\3.text_rec\synthesis\rec_pieces\lmdb_datatest_120116_21_10\effect_layout_image\effect_ensembleauthor')
     # cvt_data()
     # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')
     # li = [str(i).zfill(6) for i in range(10**6)]

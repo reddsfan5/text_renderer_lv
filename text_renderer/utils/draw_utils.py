@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PILImage
 
+from lv_tools.cores.str_utils import CLOSE_APOSTROPHE
 from lv_tools.str_utils.text_rotate import is_need_rotate
 
 from lv_tools.corpus.digit_str_gen import DigitGenerator
@@ -32,6 +33,7 @@ def transparent_img(size: Tuple[int, int]) -> PILImage:
 
     """
     return Image.new("RGBA", (size[0], size[1]), (255, 255, 255, 0))
+
 
 
 def draw_text_on_bg_hv(
@@ -319,6 +321,79 @@ def draw_text_on_bg_hv_no_pad(
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base
+
+
+
+def draw_text_on_bg_one_line(
+        font_text: FontText,
+        text_color: Tuple[int, int, int, int] = (0, 0, 0, 255),
+        char_spacing: Union[float, Tuple[float, float]] = -1,
+        save_dir: str = ''
+) -> Tuple[PILImage, list, str]:
+    """
+
+    Parameters
+    ----------
+    font_text : FontText
+    text_color : RGBA
+        Default is black
+    char_spacing : Union[float, Tuple[float, float]]
+        Draw character with spacing. If tuple, random choice between [min, max)
+        Set -1 to disable
+
+    Returns
+    -------
+        PILImage:
+            RGBA Pillow image with text on a transparent image
+    -------
+
+    """
+
+    char_spacings = []
+
+    multi_line = font_text.text
+    cs_height = font_text.size[1]
+    for i in range(len(font_text.text)):
+        if isinstance(char_spacing, list) or isinstance(char_spacing, tuple):
+            s = np.random.uniform(*char_spacing)
+            char_spacings.append(int(s * cs_height))
+        else:
+            char_spacings.append(int(char_spacing * cs_height))
+
+    # 计算文本尺寸
+    bbox = ImageDraw.Draw(Image.new('RGB', (1, 1))).multiline_textbbox((0, 0), multi_line, font=font_text.font)
+    width, height = bbox[2] - bbox[0], bbox[3] - bbox[0]
+    margin = min(width, height)  # 文本周围留白的像素
+
+    text_mask = transparent_img((width + 2 * margin, height + 2 * margin))
+    # 四周的padding 平均一个height。
+    # pre_img = copy.deepcopy(text_mask)
+    draw = ImageDraw.Draw(text_mask)
+    # draw.multiline_text((margin, margin), multi_line, font=font_text.font, fill=text_color)
+    draw.text((margin, margin), multi_line, font=font_text.font, fill=text_color)
+    # text_mask = text_mask.rotate(90, expand=True)
+    pre_img = np.array(text_mask)[..., :3]
+    points = np.argwhere(pre_img < 255)
+    xmin = np.min(points[:, 1])
+    ymin = np.min(points[:, 0])
+    xmax = np.max(points[:, 1])
+    ymax = np.max(points[:, 0])
+    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
+    if save_dir:
+        if not osp.exists(save_dir):
+            os.mkdir(save_dir)
+
+        # 存储用于字体展示
+        text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
+
+    # bbox = [[x_start, y_start], [x_start + sum(heights), y_start], [x_start + sum(heights), y_start + max(widths)],
+    #         [x_start, y_start + max(widths)]]
+    bbox = box_n.tolist()
+    font_base = osp.basename(font_text.font_path)
+
+    return text_mask, bbox, font_base
+
+
 
 
 def draw_text_on_bg_multi_line(
@@ -667,7 +742,79 @@ def draw_multiline_text_centered(image_path, text, font_path, font_size):
     image.show()
 
 
-# 示例使用
+
+
+class TextLayoutStrategy:
+    # used for one by one render
+    def is_need_rotate(self,char:str):
+        pass
+class TextLayoutHV(TextLayoutStrategy):
+    def is_need_rotate(self,char: str) -> bool:
+        '''
+        主要用于text_render 模块中。随着合成的语言越来越多，需要扩展相应的抽象或丰富需旋转的字符集
+        '''
+        # 1. 数字，英文，闭合标点 不需要旋转。 数字切出来，基本都是非旋转的。
+        # 2. 非闭合标点 旋转后最好居中（这个可先不管）
+        # 3.中文需要旋转
+
+        if ord(char) < 256 or char in CLOSE_APOSTROPHE:
+            return False
+        else:
+            return True
+
+class TextLayoutConsistent(TextLayoutStrategy):
+
+    def is_need_rotate(self,char: str):
+        return False
+
+
+
+
+
+
+
+class DrawTextonBgwithBbox:
+
+    def draw_text(self):
+        pass
+
+
+class DrawTextOnebyOne(DrawTextonBgwithBbox):
+
+    def __init__(self,layout_strategy):
+
+        pass
+
+
+
+
+class DrawSentence(DrawTextonBgwithBbox):
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':

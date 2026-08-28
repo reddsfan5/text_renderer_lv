@@ -68,7 +68,7 @@ class Corpus:
         self.font_manager = FontManager(
             cfg.font_dir, cfg.font_size
         )
-        self.punctuation = r'[-~!@#$%^&*()+_=`:;<>?,./|\]+[+——！，。？、~@#￥%……&*（）《》（）&%￥#@！{}【】~·！#￥%=；：’‘“”-]+'
+        self.punctuation = r'[-~!@#$%^&*()＋+_ـ=`:;<>?,./|\]+[+——！，。？、~@#￥%……&*（）《》‹<>›（）&%￥#@！{}【】~·！#￥%％=；：℃٪؟؛’‘“”-]+'
 
     def remove_punctuation(self, text):
         str_res = re.sub(self.punctuation, '', text)

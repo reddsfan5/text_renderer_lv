@@ -14,7 +14,17 @@ from text_renderer.config import get_cfg, GeneratorCfg
 from text_renderer.dataset import LmdbDataset, ImgDataset
 from text_renderer.render import Render
 from text_renderer.utils.draw_utils import Imgerror
+"""
+需要暴露的一些参数：
+1. 语言类型 ： 中文、韩文、日文、法文、德文、西班牙文、阿拉伯文、拉丁文、藏文
+    * 用于自动适配font，corpus
+2. 文字翻转类配置
+    * 用于配置是否翻转文字，哪些文字需要翻转等。
 
+
+
+
+"""
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
@@ -83,6 +93,7 @@ def generate_img(data_queue):
 
 
 def process_setup(*args):
+    # render 的配置部分
     global render
     import numpy as np
 
