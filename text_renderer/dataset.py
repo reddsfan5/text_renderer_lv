@@ -17,7 +17,7 @@ import numpy as np
 from tqdm import tqdm
 
 from lv_tools.cores.json_io import load_json_to_dict
-from lmdbs.lmdbs.utils import b64encode_img
+from lmdbs.lmdbs.utils import b64decode_img, b64encode_img
 
 
 class Dataset:
@@ -98,19 +98,33 @@ class ImgDataset(Dataset):
 
     LABEL_NAME = "labels.json"
 
-    def __init__(self, data_dir: str):
-        super().__init__(data_dir)
+    def __init__(self, data_dir: str, jpg_quality: int = 95):
+        super().__init__(data_dir, jpg_quality=jpg_quality)
         self._img_dir = os.path.join(data_dir, "images")
         if not os.path.exists(self._img_dir):
             os.makedirs(self._img_dir)
         self._label_path = os.path.join(data_dir, self.LABEL_NAME)
 
-        self._data = {"num-samples": 0, "labels": {}, "sizes": {}, "bboxes": {}}
+        self._data = {
+            "num-samples": 0,
+            "labels": {},
+            "sizes": {},
+            "bboxes": {},
+            "fonts": {},
+        }
         if os.path.exists(self._label_path):
             with open(self._label_path, "r", encoding="utf-8") as f:
                 self._data = json.load(f)
 
-    def write(self, name: str, image: np.ndarray, label: str, bbox=None):
+    def write(
+        self,
+        name: str,
+        image: np.ndarray,
+        label: str,
+        bbox=None,
+        font_base=None,
+        **kwargs,
+    ):
         img_path = os.path.join(self._img_dir, name + ".jpg")
         cv2.imwrite(img_path, image, self.encode_param())
         self._data["labels"][name] = label
@@ -122,6 +136,8 @@ class ImgDataset(Dataset):
             if 'bboxes' not in self._data.keys():
                 self._data['bboxes'] = {}
             self._data['bboxes'][name] = bbox
+        if font_base:
+            self._data.setdefault("fonts", {})[name] = font_base
 
     def read(self, name: str) -> Dict:
         img_path = os.path.join(self._img_dir, name + ".jpg")
@@ -155,20 +171,31 @@ class LmdbDataset(Dataset):
 
     """
 
-    def __init__(self, data_dir: str, map_size=20 * 1024 * 1024 * 1024):  # 默认初始大小
-        super().__init__(data_dir)
+    def __init__(
+        self,
+        data_dir: str,
+        map_size=20 * 1024 * 1024 * 1024,
+        cache_num: int = 500,
+        map_increment: int = 500 * 1024 * 1024,
+        jpg_quality: int = 95,
+    ):
+        super().__init__(data_dir, jpg_quality=jpg_quality)
         self._lmdb_env = lmdb.open(self.data_dir, map_size=map_size)
         self._lmdb_txn = self._lmdb_env.begin(write=True)
-        self.increment = 500 * 1024 * 1024  # 增加大小
+        self.increment = map_increment
         self.lock = Lock()
         self.count = 0
-        self.cache_num = 500
+        self.cache_num = cache_num
         self.cache = []
         self.total = 0
 
     def write(self, name: str, image: np.ndarray, label: str, bbox=None, font_base=None, **kwargs):
         img_base = name
         img_arr = image
+        if img_arr.ndim == 2:
+            img_arr = cv2.cvtColor(img_arr, cv2.COLOR_GRAY2BGR)
+        elif img_arr.ndim == 3 and img_arr.shape[2] == 1:
+            img_arr = cv2.cvtColor(img_arr, cv2.COLOR_GRAY2BGR)
         img_byte = b64encode_img(img_arr)
         h, w = img_arr.shape[:2]
         points = [[0, 0], [w, 0], [w, h], [0, h]] if not bbox else bbox
@@ -216,6 +243,17 @@ class LmdbDataset(Dataset):
         self.total += 1
 
     def read(self, name: str) -> Dict:
+        raw_record = self._lmdb_txn.get(name.encode())
+        if raw_record is not None:
+            record = json.loads(raw_record.decode("utf-8"))
+            image = b64decode_img(record["image"])
+            height, width = image.shape[:2]
+            return {
+                "image": image,
+                "label": record["transcription"],
+                "size": [width, height],
+            }
+
         label = self._lmdb_txn.get(self.label_key(name)).decode()
         size_str = self._lmdb_txn.get(self.size_key(name)).decode()
         size = [int(it) for it in size_str.split(",")]

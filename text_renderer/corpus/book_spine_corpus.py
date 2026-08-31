@@ -124,7 +124,13 @@ class BookSpineCorpus(Corpus):
             logger.debug(err_msg)
             raise RetryError(err_msg)
 
-        return FontText(font, text, font_path, self.cfg.horizontal)
+        return FontText(
+            font,
+            text,
+            font_path,
+            self.cfg.horizontal,
+            self.cfg.rotate_chars,
+        )
 
 
 class TextCorpusGen:

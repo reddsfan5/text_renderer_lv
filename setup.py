@@ -10,4 +10,5 @@ setup(
     description="",
     packages=find_packages(),
     python_requires=">=3.6",
+    install_requires=["PyYAML>=5.1"],
 )

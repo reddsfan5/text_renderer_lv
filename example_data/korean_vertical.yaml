@@ -1,0 +1,60 @@
+version: 1
+
+# Runtime scheduling. Command-line values override these fields.
+runtime:
+  num_processes: 0
+  log_period: 2
+
+storage:
+  dataset: lmdb
+  jpg_quality: 95
+  lmdb_map_size_mb: 512
+  lmdb_cache_size: 500
+  lmdb_map_increment_mb: 256
+
+generator:
+  num_images: 100
+  output_dir: "F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/lmdb_yaml_{timestamp}/effect_layout_image/effect_ensembleauthor"
+
+corpus:
+  path: "F:/dataset/OCR/图书目录/text/korea/korean_missing_chars_corpus_10w.txt"
+  charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
+  strip: true
+  normalize_spaces: true
+  remove_punctuation: true
+  allowed_punctuation: "！？"
+  min_length: 2
+  max_length: 12
+  long_text: split
+  capacity_multiplier: 1.2
+  clip_length: 12
+  char_spacing: 0
+  join_str: ""
+  orientation: vertical
+  rotate_characters: true
+
+font:
+  dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/韩文"
+  size: [30, 36]
+
+background:
+  dir: "D:/lxd_code/OCR/OCR_SOURCE/bg/bg_pure"
+  preload: true
+
+render:
+  write_mode: oneline
+  text_color_mode: gray
+  text_color_strategy: safe
+  fixed_rgb: [0, 0, 0]
+  gray_text_range: [0, 12]
+  text_alpha_range: [245, 255]
+  return_bg_and_mask: false
+  perspective:
+    enabled: false
+    type: uniform
+    x: 10
+    y: 5
+    z: 1.5
+    scale: 1
+    fovy: 50
+  corpus_effects: []

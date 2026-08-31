@@ -4,7 +4,7 @@ import random
 import traceback
 import typing
 from abc import abstractmethod,ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.util import spec_from_file_location
 from pathlib import Path
 from typing import List, Tuple, Union
@@ -39,7 +39,7 @@ class PerspectiveTransformCfg:
 @dataclass
 class FixedPerspectiveTransformCfg(PerspectiveTransformCfg):
     def get_xyz(self) -> Tuple[float, float, float]:
-        return 15, 15, 1.2
+        return self.x, self.y, self.z
 
 
 @dataclass
@@ -203,6 +203,10 @@ class RenderCfg:
     gray: bool = True
     text_color_cfg: TextColorCfg = None
     return_bg_and_mask: bool = False
+    write_mode: str = "oneline"
+    text_color_mode: str = "gray"
+    gray_text_range: Tuple[int, int] = (0, 12)
+    text_alpha_range: Tuple[int, int] = (245, 255)
 
 
 # noinspection PyUnresolvedReferences
@@ -224,6 +228,28 @@ class GeneratorCfg:
     render_cfg: RenderCfg
 
 
+@dataclass
+class RuntimeCfg:
+    num_processes: int = 2
+    log_period: float = 10
+
+
+@dataclass
+class StorageCfg:
+    dataset: str = "img"
+    jpg_quality: int = 95
+    lmdb_map_size_mb: int = 20480
+    lmdb_cache_size: int = 500
+    lmdb_map_increment_mb: int = 500
+
+
+@dataclass
+class AppCfg:
+    generators: List[GeneratorCfg]
+    runtime: RuntimeCfg = field(default_factory=RuntimeCfg)
+    storage: StorageCfg = field(default_factory=StorageCfg)
+
+
 def get_cfg(config_file: str) -> List[GeneratorCfg]:
     """
 
@@ -233,8 +259,21 @@ def get_cfg(config_file: str) -> List[GeneratorCfg]:
     Returns:
 
     """
+    return get_app_cfg(config_file).generators
+
+
+def get_app_cfg(config_file: str) -> AppCfg:
+    """Load either a YAML application config or a legacy Python config."""
+    suffix = Path(config_file).suffix.lower()
+    if suffix in {".yaml", ".yml"}:
+        from text_renderer.config.yaml_config import load_yaml_app_config
+
+        return load_yaml_app_config(config_file)
+
     print(os.path.join(os.getcwd(), config_file))
     module = import_module_from_file(config_file)
+    if module is None:
+        raise RuntimeError(f"Load config module failed: {config_file}")
     cfgs = getattr(module, "configs", None)
     if cfgs is None:
         raise RuntimeError(f"Load configs failed: {config_file}")
@@ -243,7 +282,7 @@ def get_cfg(config_file: str) -> List[GeneratorCfg]:
         [isinstance(cfg, GeneratorCfg) for cfg in cfgs]
     ), "Please make sure all items in configs is GeneratorCfg"
 
-    return cfgs
+    return AppCfg(generators=cfgs)
 
 
 def import_module_from_file(full_path_to_module):

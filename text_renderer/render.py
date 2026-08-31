@@ -54,7 +54,9 @@ class Render:
             else:
                 # todo lv 单行，混排文本切换开关：oneline，multiline 颜色开关也在此
                 img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(
-                    write_mode='oneline',cmap='gray')
+                    write_mode=self.cfg.write_mode,
+                    cmap=self.cfg.text_color_mode,
+                )
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -108,8 +110,8 @@ class Render:
                 text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
 
         else:
-            gray_value = random.randint(0, 12)
-            alpha = random.randint(245, 255)
+            gray_value = random.randint(*self.cfg.gray_text_range)
+            alpha = random.randint(*self.cfg.text_alpha_range)
             text_color = (gray_value, gray_value, gray_value, alpha)
 
 
@@ -292,7 +294,11 @@ class RenderOne(Render):
                 img, text, cropped_bg, transformed_text_mask = self.gen_multi_corpus()
             else:
                 # todo lv 单行，混排文本切换开关：oneline，multiline  颜色切换开关：书脊渲染和这个有冗余
-                img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(write_mode='oneline',text=text,cmap='gray')
+                img, text, cropped_bg, transformed_text_mask, bbox, font_base = self.gen_single_corpus(
+                    write_mode=self.cfg.write_mode,
+                    text=text,
+                    cmap=self.cfg.text_color_mode,
+                )
 
             if self.cfg.render_effects is not None:
                 img, _ = self.cfg.render_effects.apply_effects(
@@ -344,8 +350,8 @@ class RenderOne(Render):
             if self.corpus.cfg.text_color_cfg is not None:
                 text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
         else:
-            gray_value = random.randint(0, 12)
-            alpha = random.randint(245, 255)
+            gray_value = random.randint(*self.cfg.gray_text_range)
+            alpha = random.randint(*self.cfg.text_alpha_range)
             text_color = (gray_value, gray_value, gray_value, alpha)
 
 

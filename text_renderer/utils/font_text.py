@@ -26,6 +26,7 @@ class FontText:
     text: str
     font_path: str
     horizontal: bool = True
+    rotate_chars: bool = True
 
     @property
     def xy(self):

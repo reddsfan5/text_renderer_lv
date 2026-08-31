@@ -79,7 +79,7 @@ def draw_text_on_bg_hv(
 
     for c in font_text.text:
         size = font_getsize(font_text.font, c)
-        if is_need_rotate(c):
+        if font_text.rotate_chars and is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -134,7 +134,7 @@ def draw_text_on_bg_hv(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if is_need_rotate(c):
+            if font_text.rotate_chars and is_need_rotate(c):
                 # 卧倒中文书写
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
                 if c != ' ' and (np.array(text_mask) == pre_img).all():
@@ -225,7 +225,7 @@ def draw_text_on_bg_hv_no_pad(
 
     for c in font_text.text:
         size = font_getsize(font_text.font, c)
-        if is_need_rotate(c):
+        if font_text.rotate_chars and is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -279,7 +279,7 @@ def draw_text_on_bg_hv_no_pad(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if is_need_rotate(c):
+            if font_text.rotate_chars and is_need_rotate(c):
                 # 卧倒中文书写
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
                 if c != ' ' and (np.array(text_mask) == pre_img).all():
@@ -508,7 +508,7 @@ def draw_text_on_bg(
 
     for c in font_text.text:
         size = font_getsize(font_text.font, c)
-        if is_need_rotate(c):
+        if font_text.rotate_chars and is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -558,7 +558,7 @@ def draw_text_on_bg(
         vertical_location = []
         vertical_text = []
         for i, c in enumerate(font_text.text):
-            if is_need_rotate(c):
+            if font_text.rotate_chars and is_need_rotate(c):
                 draw.text((c_x - x_offset, c_y), c, fill=text_color, font=font_text.font)
             else:
                 vertical_location.append((c_y, text_mask.width - (c_x - x_offset + widths[i])))

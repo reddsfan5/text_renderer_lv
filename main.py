@@ -2,15 +2,15 @@ import argparse
 import multiprocessing as mp
 import os
 import time
-import traceback
 from multiprocessing import Value
 from multiprocessing.context import Process
+from pathlib import Path
 import sys
-sys.path.append('D:\lxd_code\lv_tools\src')
+sys.path.append('D:/lxd_code/lv_tools/src')
 import cv2
 from loguru import logger
 
-from text_renderer.config import get_cfg, GeneratorCfg
+from text_renderer.config import AppCfg, GeneratorCfg, get_app_cfg
 from text_renderer.dataset import LmdbDataset, ImgDataset
 from text_renderer.render import Render
 from text_renderer.utils.draw_utils import Imgerror
@@ -41,19 +41,21 @@ class DBWriterProcess(Process):
             data_queue,
             generator_cfg: GeneratorCfg,
             log_period: float = 1,
+            dataset_kwargs=None,
     ):
         super().__init__()
         self.dataset_cls = dataset_cls
         self.data_queue = data_queue
         self.generator_cfg = generator_cfg
         self.log_period = log_period
+        self.dataset_kwargs = dataset_kwargs or {}
 
     def run(self):
         num_image = self.generator_cfg.num_image
         save_dir = self.generator_cfg.save_dir
         log_period = max(1, int(self.log_period / 100 * num_image))
         try:
-            with self.dataset_cls(str(save_dir)) as db:
+            with self.dataset_cls(str(save_dir), **self.dataset_kwargs) as db:
                 exist_count = db.read_count()
                 count = 0
                 logger.info(f"Exist image count in {save_dir}: 【{exist_count}】")
@@ -105,15 +107,75 @@ def process_setup(*args):
 
 
 def parse_args(arg_list: list = None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True, help="python file path")
-    parser.add_argument("--dataset", default="img", choices=["lmdb", "img"])
-    parser.add_argument("--num_processes", type=int, default=2)
-    parser.add_argument("--log_period", type=float, default=10)
+    parser = argparse.ArgumentParser(description="Generate OCR text images")
+    parser.add_argument(
+        "--config",
+        default="./example_data/korean_vertical.yaml",
+        help="YAML config path; legacy Python configs are also supported",
+    )
+    parser.add_argument("--dataset", choices=["lmdb", "img"], default=None)
+    parser.add_argument("--num-processes", "--num_processes", type=int, default=None)
+    parser.add_argument("--num-images", type=int, default=None)
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--log-period", "--log_period", type=float, default=None)
     if arg_list is None:
         return parser.parse_args()
     else:
         return parser.parse_args(arg_list)
+
+
+def apply_cli_overrides(app_cfg: AppCfg, args):
+    if args.num_images is not None and args.num_images <= 0:
+        raise ValueError("--num-images must be > 0")
+    if args.num_processes is not None and args.num_processes < 0:
+        raise ValueError("--num-processes must be >= 0")
+    if args.log_period is not None and args.log_period <= 0:
+        raise ValueError("--log-period must be > 0")
+
+    if args.num_processes is not None:
+        app_cfg.runtime.num_processes = args.num_processes
+    if args.log_period is not None:
+        app_cfg.runtime.log_period = args.log_period
+    if args.dataset is not None:
+        app_cfg.storage.dataset = args.dataset
+
+    for index, generator_cfg in enumerate(app_cfg.generators):
+        if args.num_images is not None:
+            generator_cfg.num_image = args.num_images
+            corpus = generator_cfg.render_cfg.corpus
+            corpora = corpus if isinstance(corpus, list) else [corpus]
+            for corpus_item in corpora:
+                texts = getattr(corpus_item, "texts", None)
+                if isinstance(texts, list) and texts and len(texts) < args.num_images:
+                    repeat = (args.num_images + len(texts) - 1) // len(texts)
+                    corpus_item.texts *= repeat
+
+        if args.output_dir is not None:
+            output_dir = Path(args.output_dir)
+            if len(app_cfg.generators) > 1:
+                output_dir = output_dir / f"generator_{index}"
+            generator_cfg.save_dir = output_dir
+    return app_cfg
+
+
+def get_dataset_kwargs(app_cfg: AppCfg):
+    storage = app_cfg.storage
+    if storage.dataset == "lmdb":
+        return {
+            "map_size": storage.lmdb_map_size_mb * 1024 * 1024,
+            "cache_num": storage.lmdb_cache_size,
+            "map_increment": storage.lmdb_map_increment_mb * 1024 * 1024,
+            "jpg_quality": storage.jpg_quality,
+        }
+    return {"jpg_quality": storage.jpg_quality}
+
+
+def join_writer_process(process):
+    process.join()
+    if process.exitcode != 0:
+        raise RuntimeError(
+            f"Dataset writer process failed with exit code {process.exitcode}"
+        )
 
 
 
@@ -124,14 +186,6 @@ if __name__ == "__main__":
     
     '''
 
-
-    '''
-    # 代码都是针对写入lmdb 的逻辑进行改写的，没有维护写入img的逻辑，所以在写入img时，会报错。
-    
-    --config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2
-    
-    --config .\example_data/example.py --dataset lmdb --num_processes 1 --log_period 2
-    '''
     r'''
     当前困惑：不支持字体是如何使程序的计数出现问题，导致 data_queue.put(STOP_TOKEN) 没有执行的。
     
@@ -145,38 +199,35 @@ if __name__ == "__main__":
     font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
     '''
 
+    args = parse_args()
+    app_cfg = apply_cli_overrides(get_app_cfg(args.config), args)
+    dataset_cls = LmdbDataset if app_cfg.storage.dataset == "lmdb" else ImgDataset
+    dataset_kwargs = get_dataset_kwargs(app_cfg)
     mp.set_start_method("spawn", force=True)
     manager = mp.Manager()
     # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
     # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
     data_queue = manager.Queue()
-    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 0 --log_period 2'.split(' ')
 
-    if not sys.argv[1:]:
-        args = parse_args(arg_list)
-    else:
-        args = parse_args()
-    # args = parse_args()
-
-    dataset_cls = LmdbDataset if args.dataset == "lmdb" else ImgDataset
-
-    generator_cfgs = get_cfg(args.config)
-
-    for generator_cfg in generator_cfgs:
+    for generator_cfg in app_cfg.generators:
         db_writer_process = DBWriterProcess(
-            dataset_cls, data_queue, generator_cfg, args.log_period
+            dataset_cls,
+            data_queue,
+            generator_cfg,
+            app_cfg.runtime.log_period,
+            dataset_kwargs,
         )
         db_writer_process.start()
 
-        if args.num_processes == 0:
+        if app_cfg.runtime.num_processes == 0:
             process_setup(generator_cfg.render_cfg)
             for _ in range(generator_cfg.num_image):
                 generate_img(data_queue)
             data_queue.put(STOP_TOKEN)
-            db_writer_process.join()
+            join_writer_process(db_writer_process)
         else:
             with mp.Pool(
-                    processes=args.num_processes,
+                    processes=app_cfg.runtime.num_processes,
                     initializer=process_setup,
                     initargs=(generator_cfg.render_cfg,),
             ) as pool:
@@ -187,4 +238,4 @@ if __name__ == "__main__":
                 pool.join()
 
             data_queue.put(STOP_TOKEN)
-            db_writer_process.join()
+            join_writer_process(db_writer_process)

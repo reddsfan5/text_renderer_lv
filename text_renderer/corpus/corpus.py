@@ -3,7 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, Union
-import re
+import unicodedata
 from loguru import logger
 from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
@@ -38,6 +38,10 @@ class CorpusCfg:
         horizontal : bool
             generate the horizontal(default) or vertical text
             Set False to generate vertical text
+        rotate_chars : bool
+            Rotate language-specific characters while drawing vertical text
+        remove_punctuation : bool
+            Remove punctuation and symbols except allowed_punctuation
     """
     font_dir: Path
     font_size: Tuple[int, int]
@@ -46,6 +50,9 @@ class CorpusCfg:
     char_spacing: Union[float, Tuple[float, float]] = -1
     text_color_cfg: TextColorCfg = SafeTextColorCfg()
     horizontal: bool = True
+    rotate_chars: bool = True
+    remove_punctuation: bool = True
+    allowed_punctuation: str = "！？"
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -68,11 +75,16 @@ class Corpus:
         self.font_manager = FontManager(
             cfg.font_dir, cfg.font_size
         )
-        self.punctuation = r'[-~!@#$%^&*()＋+_ـ=`:;<>?,./|\]+[+——！，。？、~@#￥%……&*（）《》‹<>›（）&%￥#@！{}【】~·！#￥%％=；：℃٪؟؛’‘“”-]+'
-
     def remove_punctuation(self, text):
-        str_res = re.sub(self.punctuation, '', text)
-        return str_res
+        if not self.cfg.remove_punctuation:
+            return text
+        return "".join(
+            char
+            for char in text
+            if unicodedata.category(char)[0] not in {"P", "S"}
+            or char in self.cfg.allowed_punctuation
+        )
+
     @retry(
         stop=stop_after_attempt(20),
         retry=retry_if_exception_type(RetryError),
@@ -137,7 +149,13 @@ class Corpus:
             raise RetryError(err_msg)
 
         self._commit_text()
-        return FontText(font, text, font_path, self.cfg.horizontal)
+        return FontText(
+            font,
+            text,
+            font_path,
+            self.cfg.horizontal,
+            self.cfg.rotate_chars,
+        )
 
     def _commit_text(self):
         """Commit a candidate text after it passes font validation."""
@@ -167,7 +185,13 @@ class Corpus:
             logger.debug(err_msg)
             raise RetryError(err_msg)
 
-        return FontText(font, text, font_path, self.cfg.horizontal)
+        return FontText(
+            font,
+            text,
+            font_path,
+            self.cfg.horizontal,
+            self.cfg.rotate_chars,
+        )
 
     @abstractmethod
     def get_text(self):
