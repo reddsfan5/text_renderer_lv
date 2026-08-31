@@ -91,7 +91,16 @@ def test_v2_language_profile_keeps_corpus_font_and_text_together():
             },
             "tibetan": {
                 "corpus": {"path": "tibetan.txt", "min_length": 2},
-                "font": {"dir": "tibetan-fonts", "size": [28, 34]},
+                "font": {
+                    "active": "book",
+                    "variants": {
+                        "book": {"dir": "tibetan-fonts", "size": [28, 34]},
+                        "display": {
+                            "dir": "tibetan-display-fonts",
+                            "size": [30, 38],
+                        },
+                    },
+                },
                 "text": {
                     "orientation": "horizontal",
                     "rotate_characters": False,

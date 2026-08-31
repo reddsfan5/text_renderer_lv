@@ -47,15 +47,58 @@ languages:
 语言档案。每个档案必须包含 `corpus` 和 `font`，从结构上避免错配语料和
 字体。`text` 紧邻二者，保存与该文字系统相关的横竖排和字符旋转参数。
 
+示例配置已根据 `effect_layout_example.py` 整理出以下可直接选择的档案：
+
+| 档案名 | 内容 |
+| --- | --- |
+| `chinese` | 中文书名语料及简体字体 |
+| `korean` | 韩文补充语料及韩文字体 |
+| `korean_catalog` | 280 万韩文书名、作者、出版社语料及韩文字体 |
+| `japanese` | 日文书名语料及日文字体 |
+| `japanese_callnumber` | 日文索书号语料及日文字体 |
+| `french` | 法文书目信息及法文字体 |
+| `spanish` | 西班牙文语料及拉丁字体 |
+| `russian` | 俄文规范化语料及俄文字体 |
+| `german` | 德文 Open Library 语料及德文字体 |
+| `tibetan` | 藏文语料及藏文字体 |
+
+同一语言有多套字体时，可在语言档案内声明字体变体。修改 `active` 即可切换，
+不需要重新查找或复制路径：
+
+```yaml
+languages:
+  chinese:
+    corpus:
+      path: "F:/corpus/chinese.txt"
+    font:
+      active: standard
+      variants:
+        standard:
+          dir: "D:/fonts/chinese-standard"
+          size: [30, 36]
+        single:
+          dir: "D:/fonts/chinese-single"
+          size: [20, 21]
+```
+
+`multilingual.yaml` 中已收录旧 Python 示例定义的全部字体目录，包括中文
+标准、mini、艺术、单字体、常规字体，以及拉丁手写、多语言拉丁、韩文、
+日文、俄文和藏文字体。
+
 顶层 `background`、`render` 是公共默认值。某种语言确实需要不同配置时，
 可在该语言档案内增加同名节点，只覆盖需要变化的字段：
 
 ```yaml
 languages:
   tibetan:
-    corpus: {}
-    font: {}
-    text: {}
+    corpus:
+      path: "F:/corpus/tibetan.txt"
+    font:
+      dir: "D:/fonts/tibetan"
+      size: [30, 36]
+    text:
+      orientation: horizontal
+      rotate_characters: false
     render:
       text_color_mode: color
     background:

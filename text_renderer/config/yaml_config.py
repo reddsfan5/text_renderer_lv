@@ -273,6 +273,40 @@ def _language_names(value: Any, section: str) -> List[str]:
     return result
 
 
+def _resolve_v2_font(value: Any, section: str) -> Dict[str, Any]:
+    font = _mapping(value, section)
+    _validate_keys(font, section, {"dir", "size", "active", "variants"})
+    if "variants" not in font:
+        return font
+
+    if "dir" in font or "size" in font:
+        raise ValueError(
+            f"YAML section '{section}' cannot mix dir/size with font variants"
+        )
+    if "active" not in font:
+        raise ValueError(f"Missing key 'active' in YAML section '{section}'")
+
+    variants = _mapping(font["variants"], f"{section}.variants")
+    if not variants:
+        raise ValueError(f"YAML section '{section}.variants' must not be empty")
+    active = str(font["active"])
+    if active not in variants:
+        raise ValueError(
+            f"Unknown active font variant '{active}' in '{section}'. "
+            f"Available: {sorted(variants)}"
+        )
+
+    for name, raw_variant in variants.items():
+        variant = _mapping(raw_variant, f"{section}.variants.{name}")
+        _validate_keys(
+            variant,
+            f"{section}.variants.{name}",
+            {"dir", "size"},
+            {"dir", "size"},
+        )
+    return _mapping(variants[active], f"{section}.variants.{active}")
+
+
 def _build_v2_job_roots(
     root: Mapping[str, Any], selected_languages: Sequence[str] = None
 ) -> List[Tuple[str, Dict[str, Any]]]:
@@ -369,7 +403,9 @@ def _build_v2_job_roots(
                 "output_dir": output_dir,
             },
             "corpus": corpus_data,
-            "font": _mapping(profile["font"], f"languages.{language}.font"),
+            "font": _resolve_v2_font(
+                profile["font"], f"languages.{language}.font"
+            ),
             "background": _merge_mappings(
                 root.get("background"),
                 profile.get("background"),
