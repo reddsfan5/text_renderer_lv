@@ -49,8 +49,21 @@ class FontManager:
 
         return font_paths
 
-    def get_font(self) -> Tuple[FreeTypeFont, Set, str]:
-        font_path = random.choice(self.font_paths)
+    def get_font(self, text: str = None) -> Tuple[FreeTypeFont, Set, str]:
+        font_paths = self.font_paths
+        if text is not None:
+            text_chars = set(text)
+            font_paths = [
+                font_path
+                for font_path in self.font_paths
+                if text_chars <= self.font_support_chars_cache.get(font_path, set())
+            ]
+            if not font_paths:
+                raise ValueError(f"no font supports all characters in text: {text}")
+        if not font_paths:
+            raise ValueError("font_paths is empty")
+
+        font_path = random.choice(font_paths)
 
         font_size = random.choice(range(*self.font_size_range))
 

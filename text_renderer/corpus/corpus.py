@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Tuple, Union
 import re
 from loguru import logger
-from tenacity import retry, stop_after_attempt
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 from text_renderer.font_manager import FontManager
 from text_renderer.config import TextColorCfg, SafeTextColorCfg
@@ -73,7 +73,11 @@ class Corpus:
     def remove_punctuation(self, text):
         str_res = re.sub(self.punctuation, '', text)
         return str_res
-    @retry
+    @retry(
+        stop=stop_after_attempt(20),
+        retry=retry_if_exception_type(RetryError),
+        reraise=True,
+    )
     def sample(self):
         """
         This method ensures that the selected font supports all characters.
@@ -87,14 +91,37 @@ class Corpus:
             text = self.get_text()
             # todo 文本标点过滤
             # text = self.remove_punctuation(text)
+        except ValueError as e:
+            if str(e) == "texts is empty":
+                raise PanicError("corpus is exhausted") from e
+            logger.exception(e)
+            raise RetryError() from e
         except Exception as e:
             logger.exception(e)
-            raise RetryError()
+            raise RetryError() from e
         # 最大文本长度控制
         if self.cfg.clip_length != -1 and len(text) > self.cfg.clip_length:
             text = text[: self.cfg.clip_length]
 
-        font, support_chars, font_path = self.font_manager.get_font()
+        if not text:
+            self._discard_text()
+            raise RetryError("empty text")
+
+        text_chars = set(text)
+        if not any(
+            text_chars <= self.font_manager.font_support_chars_cache.get(font_path, set())
+            for font_path in self.font_manager.font_paths
+        ):
+            self._discard_text()
+            raise RetryError(
+                "没有字体支持文本中的全部字符: {}".format(text_chars)
+            )
+
+        try:
+            font, support_chars, font_path = self.font_manager.get_font(text)
+        except ValueError as e:
+            self._discard_text()
+            raise RetryError(str(e)) from e
         status, intersect = self.font_manager.check_support(text, support_chars)
         if not status:
 
@@ -109,7 +136,16 @@ class Corpus:
             logger.debug(err_msg)
             raise RetryError(err_msg)
 
+        self._commit_text()
         return FontText(font, text, font_path, self.cfg.horizontal)
+
+    def _commit_text(self):
+        """Commit a candidate text after it passes font validation."""
+        return None
+
+    def _discard_text(self):
+        """Discard a candidate text that no available font can support."""
+        return None
 
 
 

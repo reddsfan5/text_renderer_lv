@@ -84,9 +84,9 @@ def generate_img(data_queue):
     try:
         # print('多进程断点处')
         data = render()
-    except Imgerror:
+    except Imgerror as error:
         data = None
-        traceback.print_exc()
+        logger.warning("Skip image after render retries: {}", error)
 
     if data is not None:
         data_queue.put({"image": data[0], "label": data[1], "bbox": data[2], 'font': data[3]})

@@ -46,7 +46,7 @@ class Render:
         if not is_list(self.corpus) and is_list(self.cfg.corpus_effects):
             raise PanicError("corpus_effects is list, corpus is not list")
 
-    @retry
+    @retry(stop=stop_after_attempt(5), reraise=True)
     def __call__(self, *args, **kwargs) -> Tuple[np.ndarray, str,list,str]:
         try:
             if self._should_apply_layout():

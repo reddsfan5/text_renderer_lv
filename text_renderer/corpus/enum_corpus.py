@@ -62,6 +62,8 @@ class EnumCorpus(Corpus):
         elif len(self.cfg.items) != 0:
             self.texts = self.cfg.items
 
+        self._pending_text = None
+
         if self.cfg.chars_file is not None:
             self.font_manager.update_font_support_chars(self.cfg.chars_file)
 
@@ -76,9 +78,26 @@ class EnumCorpus(Corpus):
     def get_text(self) -> str:
 
         # 文本遍历模式
+        if self._pending_text is None:
+            if not self.texts:
+                raise ValueError("texts is empty")
+            self._pending_text = self.texts[-1]
+
+        text = self.cfg.join_str.join(self._pending_text)
+        return self.remove_punctuation(text)
+
+    def _commit_text(self):
+        if self._pending_text is None:
+            return
+        if not self.texts:
+            raise ValueError("texts is empty")
+        self.texts.pop()
+        self._pending_text = None
+
+    def _discard_text(self):
+        if self._pending_text is None:
+            return
         if self.texts:
-            text = self.texts.pop()
-            text  = self.cfg.join_str.join(text)
-            return self.remove_punctuation(text)
-        raise ValueError("texts is empty")
+            self.texts.pop()
+        self._pending_text = None
 
