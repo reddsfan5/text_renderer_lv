@@ -226,6 +226,7 @@ class GeneratorCfg:
     num_image: int
     save_dir: Path
     render_cfg: RenderCfg
+    name: str = "default"
 
 
 @dataclass
@@ -262,13 +263,16 @@ def get_cfg(config_file: str) -> List[GeneratorCfg]:
     return get_app_cfg(config_file).generators
 
 
-def get_app_cfg(config_file: str) -> AppCfg:
+def get_app_cfg(config_file: str, selected_languages=None) -> AppCfg:
     """Load either a YAML application config or a legacy Python config."""
     suffix = Path(config_file).suffix.lower()
     if suffix in {".yaml", ".yml"}:
         from text_renderer.config.yaml_config import load_yaml_app_config
 
-        return load_yaml_app_config(config_file)
+        return load_yaml_app_config(config_file, selected_languages)
+
+    if selected_languages:
+        raise ValueError("--language is only supported by version 2 YAML configs")
 
     print(os.path.join(os.getcwd(), config_file))
     module = import_module_from_file(config_file)

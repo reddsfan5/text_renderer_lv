@@ -1,0 +1,110 @@
+version: 2
+
+# 公共运行参数。命令行参数优先于这里的值。
+runtime:
+  num_processes: 0
+  log_period: 2
+
+storage:
+  dataset: lmdb
+  jpg_quality: 95
+  lmdb_map_size_mb: 512
+  lmdb_cache_size: 500
+  lmdb_map_increment_mb: 256
+
+generator:
+  # 可同时启用多个语言，也可用 --language 临时覆盖。
+  active_languages: [korean]
+  num_images: 100
+  output_dir: "F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/lmdb_yaml_{timestamp}/{language}"
+
+# 背景和渲染参数默认由所有语言共享；语言档案内可按需覆盖。
+background:
+  dir: "D:/lxd_code/OCR/OCR_SOURCE/bg/bg_pure"
+  preload: true
+
+render:
+  write_mode: oneline
+  text_color_mode: gray
+  text_color_strategy: safe
+  fixed_rgb: [0, 0, 0]
+  gray_text_range: [0, 12]
+  text_alpha_range: [245, 255]
+  return_bg_and_mask: false
+  perspective:
+    enabled: false
+    type: uniform
+    x: 10
+    y: 5
+    z: 1.5
+    scale: 1
+    fovy: 50
+  corpus_effects: []
+
+# 每个语言档案把相互耦合的语料、字符集、字体和排版放在一起。
+languages:
+  korean:
+    corpus:
+      path: "F:/dataset/OCR/图书目录/text/korea/korean_missing_chars_corpus_10w.txt"
+      charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
+      strip: true
+      normalize_spaces: true
+      remove_punctuation: true
+      allowed_punctuation: "！？"
+      min_length: 2
+      max_length: 12
+      long_text: split
+      capacity_multiplier: 1.2
+    font:
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/韩文"
+      size: [30, 36]
+    text:
+      orientation: vertical
+      rotate_characters: true
+      clip_length: 12
+      char_spacing: 0
+      join_str: ""
+
+  chinese:
+    corpus:
+      path: "D:/lxd_code/OCR/OCR_SOURCE/corpus/book_name_data/book_name_file.txt"
+      charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_charset_dict_9735.txt"
+      strip: true
+      normalize_spaces: true
+      remove_punctuation: true
+      allowed_punctuation: "！？"
+      min_length: 2
+      max_length: 12
+      long_text: split
+      capacity_multiplier: 1.2
+    font:
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/简体-简体-低风险"
+      size: [30, 36]
+    text:
+      orientation: vertical
+      rotate_characters: true
+      clip_length: 12
+      char_spacing: 0
+      join_str: ""
+
+  tibetan:
+    corpus:
+      path: "F:/dataset/OCR/图书目录/text/tibetan/n-bo_normed_mini.txt"
+      charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
+      strip: true
+      normalize_spaces: true
+      remove_punctuation: false
+      allowed_punctuation: "！？"
+      min_length: 2
+      max_length: 12
+      long_text: split
+      capacity_multiplier: 1.2
+    font:
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/藏文"
+      size: [30, 36]
+    text:
+      orientation: horizontal
+      rotate_characters: false
+      clip_length: 12
+      char_spacing: 0
+      join_str: ""

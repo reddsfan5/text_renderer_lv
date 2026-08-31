@@ -110,8 +110,14 @@ def parse_args(arg_list: list = None):
     parser = argparse.ArgumentParser(description="Generate OCR text images")
     parser.add_argument(
         "--config",
-        default="./example_data/korean_vertical.yaml",
+        default="./example_data/multilingual.yaml",
         help="YAML config path; legacy Python configs are also supported",
+    )
+    parser.add_argument(
+        "--language",
+        dest="selected_languages",
+        action="append",
+        help="Select a language profile; repeat to generate multiple languages",
     )
     parser.add_argument("--dataset", choices=["lmdb", "img"], default=None)
     parser.add_argument("--num-processes", "--num_processes", type=int, default=None)
@@ -139,7 +145,7 @@ def apply_cli_overrides(app_cfg: AppCfg, args):
     if args.dataset is not None:
         app_cfg.storage.dataset = args.dataset
 
-    for index, generator_cfg in enumerate(app_cfg.generators):
+    for generator_cfg in app_cfg.generators:
         if args.num_images is not None:
             generator_cfg.num_image = args.num_images
             corpus = generator_cfg.render_cfg.corpus
@@ -153,7 +159,7 @@ def apply_cli_overrides(app_cfg: AppCfg, args):
         if args.output_dir is not None:
             output_dir = Path(args.output_dir)
             if len(app_cfg.generators) > 1:
-                output_dir = output_dir / f"generator_{index}"
+                output_dir = output_dir / generator_cfg.name
             generator_cfg.save_dir = output_dir
     return app_cfg
 
@@ -200,7 +206,9 @@ if __name__ == "__main__":
     '''
 
     args = parse_args()
-    app_cfg = apply_cli_overrides(get_app_cfg(args.config), args)
+    app_cfg = apply_cli_overrides(
+        get_app_cfg(args.config, args.selected_languages), args
+    )
     dataset_cls = LmdbDataset if app_cfg.storage.dataset == "lmdb" else ImgDataset
     dataset_kwargs = get_dataset_kwargs(app_cfg)
     mp.set_start_method("spawn", force=True)

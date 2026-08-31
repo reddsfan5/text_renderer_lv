@@ -243,20 +243,172 @@ def _resolve_output_dir(value: str) -> Path:
     return _path(str(value).replace("{timestamp}", timestamp))
 
 
-def load_yaml_app_config(config_file: str) -> AppCfg:
-    config_path = Path(config_file)
-    with config_path.open("r", encoding="utf-8-sig") as stream:
-        root = yaml.safe_load(stream) or {}
-    root = _mapping(root, "root")
+def _merge_mappings(base: Any, override: Any, section: str) -> Dict[str, Any]:
+    merged = _mapping(base, section)
+    merged.update(_mapping(override, section))
+    return merged
+
+
+def _language_names(value: Any, section: str) -> List[str]:
+    if isinstance(value, str):
+        names = [value]
+    elif isinstance(value, list):
+        names = value
+    else:
+        raise ValueError(f"'{section}' must be a language name or a list of names")
+
+    result = []
+    for name in names:
+        if not isinstance(name, str):
+            raise ValueError(f"'{section}' language names must be strings")
+        name = name.strip()
+        if not name:
+            raise ValueError(f"'{section}' contains an empty language name")
+        if name in {".", ".."} or "/" in name or "\\" in name:
+            raise ValueError(f"'{section}' contains an unsafe language name: {name!r}")
+        if name not in result:
+            result.append(name)
+    if not result:
+        raise ValueError(f"'{section}' must select at least one language")
+    return result
+
+
+def _build_v2_job_roots(
+    root: Mapping[str, Any], selected_languages: Sequence[str] = None
+) -> List[Tuple[str, Dict[str, Any]]]:
+    """Expand each selected language profile into a version 1 job config."""
+    _validate_keys(
+        root,
+        "root",
+        {
+            "version",
+            "runtime",
+            "storage",
+            "generator",
+            "languages",
+            "background",
+            "render",
+        },
+        {"generator", "languages"},
+    )
+    generator_data = _mapping(root["generator"], "generator")
+    _validate_keys(
+        generator_data,
+        "generator",
+        {"active_languages", "num_images", "output_dir"},
+        {"active_languages", "num_images", "output_dir"},
+    )
+    languages = _mapping(root["languages"], "languages")
+    if not languages:
+        raise ValueError("YAML section 'languages' must not be empty")
+
+    for language, raw_profile in languages.items():
+        profile = _mapping(raw_profile, f"languages.{language}")
+        _validate_keys(
+            profile,
+            f"languages.{language}",
+            {
+                "corpus",
+                "font",
+                "text",
+                "background",
+                "render",
+                "num_images",
+                "output_dir",
+            },
+            {"corpus", "font"},
+        )
+
+    names = (
+        _language_names(list(selected_languages), "--language")
+        if selected_languages
+        else _language_names(generator_data["active_languages"], "generator.active_languages")
+    )
+    unknown = [name for name in names if name not in languages]
+    if unknown:
+        raise ValueError(
+            f"Unknown language profiles: {unknown}. Available: {sorted(languages)}"
+        )
+
+    jobs = []
+    for language in names:
+        profile = _mapping(languages[language], f"languages.{language}")
+        corpus_data = _mapping(profile["corpus"], f"languages.{language}.corpus")
+        text_data = _mapping(profile.get("text"), f"languages.{language}.text")
+        _validate_keys(
+            text_data,
+            f"languages.{language}.text",
+            {
+                "orientation",
+                "rotate_characters",
+                "clip_length",
+                "char_spacing",
+                "join_str",
+            },
+        )
+        overlap = set(corpus_data) & set(text_data)
+        if overlap:
+            raise ValueError(
+                f"Duplicate text keys in languages.{language}.corpus and .text: "
+                f"{sorted(overlap)}"
+            )
+        corpus_data.update(text_data)
+
+        num_images = profile.get("num_images", generator_data["num_images"])
+        has_profile_output = "output_dir" in profile
+        output_dir = str(profile.get("output_dir", generator_data["output_dir"]))
+        if len(names) > 1 and not has_profile_output and "{language}" not in output_dir:
+            output_dir = str(Path(output_dir) / language)
+        output_dir = output_dir.replace("{language}", language)
+        job_root = {
+            "version": 1,
+            "runtime": root.get("runtime"),
+            "storage": root.get("storage"),
+            "generator": {
+                "num_images": num_images,
+                "output_dir": output_dir,
+            },
+            "corpus": corpus_data,
+            "font": _mapping(profile["font"], f"languages.{language}.font"),
+            "background": _merge_mappings(
+                root.get("background"),
+                profile.get("background"),
+                f"languages.{language}.background",
+            ),
+            "render": _merge_mappings(
+                root.get("render"),
+                profile.get("render"),
+                f"languages.{language}.render",
+            ),
+        }
+        jobs.append((language, job_root))
+    return jobs
+
+
+def _load_v2_root(
+    root: Mapping[str, Any], selected_languages: Sequence[str] = None
+) -> AppCfg:
+    jobs = _build_v2_job_roots(root, selected_languages)
+    app_configs = []
+    for language, job_root in jobs:
+        app_cfg = _load_v1_root(job_root)
+        app_cfg.generators[0].name = language
+        app_configs.append(app_cfg)
+
+    return AppCfg(
+        generators=[cfg.generators[0] for cfg in app_configs],
+        runtime=app_configs[0].runtime,
+        storage=app_configs[0].storage,
+    )
+
+
+def _load_v1_root(root: Mapping[str, Any]) -> AppCfg:
     _validate_keys(
         root,
         "root",
         {"version", "runtime", "storage", "generator", "corpus", "font", "background", "render"},
         {"generator", "corpus", "font", "background"},
     )
-    if int(root.get("version", 1)) != 1:
-        raise ValueError("Only YAML config version 1 is supported")
-
     runtime_data = _mapping(root.get("runtime"), "runtime")
     _validate_keys(runtime_data, "runtime", {"num_processes", "log_period"})
     runtime = RuntimeCfg(
@@ -390,3 +542,20 @@ def load_yaml_app_config(config_file: str) -> AppCfg:
         render_cfg=render_cfg,
     )
     return AppCfg(generators=[generator], runtime=runtime, storage=storage)
+
+
+def load_yaml_app_config(
+    config_file: str, selected_languages: Sequence[str] = None
+) -> AppCfg:
+    config_path = Path(config_file)
+    with config_path.open("r", encoding="utf-8-sig") as stream:
+        root = _mapping(yaml.safe_load(stream) or {}, "root")
+
+    version = int(root.get("version", 1))
+    if version == 1:
+        if selected_languages:
+            raise ValueError("--language requires a version 2 multilingual YAML config")
+        return _load_v1_root(root)
+    if version == 2:
+        return _load_v2_root(root, selected_languages)
+    raise ValueError(f"Unsupported YAML config version: {version}")
