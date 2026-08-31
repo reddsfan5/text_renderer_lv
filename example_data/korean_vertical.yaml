@@ -4,6 +4,8 @@ version: 1
 runtime:
   num_processes: 0
   log_period: 2
+  queue_size: 64
+  task_batch_size: 8
 
 storage:
   dataset: lmdb

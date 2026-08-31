@@ -1,47 +1,73 @@
+"""多语言 OCR 文本识别数据生成入口。
+
+常用命令
+--------
+使用 YAML 中 ``generator.active_languages`` 指定的语言：
+
+    python main.py --config example_data/multilingual.yaml
+
+临时选择一个或多个语言：
+
+    python main.py --language korean
+    python main.py --language chinese --language korean
+
+覆盖生成数量、输出目录和进程数：
+
+    python main.py --language korean --num-images 10000 --num-processes 4
+
+调试时使用单进程，异常堆栈最清楚：
+
+    python main.py --language korean --num-images 10 --num-processes 0
+
+配置说明
+--------
+命令行参数优先于 YAML。语言对应的 corpus、charset、font 和文字方向配置在
+``example_data/multilingual.yaml`` 的 ``languages`` 节点中。多进程性能参数位于
+``runtime``：``num_processes`` 是渲染进程数，``queue_size`` 控制待写图片的
+内存上限，``task_batch_size`` 控制每个进程池任务连续生成的图片数。
+
+建议先从物理 CPU 核心数的一半开始测试。字体初始化成本较高，小批量任务可能
+单进程更快；批量生成时再逐步增加进程数。每个渲染进程都会持有字体缓存和预加载
+背景，内存不足时应降低 ``num_processes`` 或关闭背景预加载。
+"""
+
 import argparse
 import multiprocessing as mp
 import os
+import queue
+import sys
 import time
-from multiprocessing import Value
 from multiprocessing.context import Process
 from pathlib import Path
-import sys
-sys.path.append('D:/lxd_code/lv_tools/src')
+from typing import Iterable
+
+sys.path.append("D:/lxd_code/lv_tools/src")
+
 import cv2
 from loguru import logger
 
 from text_renderer.config import AppCfg, GeneratorCfg, get_app_cfg
-from text_renderer.dataset import LmdbDataset, ImgDataset
+from text_renderer.dataset import ImgDataset, LmdbDataset
 from text_renderer.render import Render
 from text_renderer.utils.draw_utils import Imgerror
-"""
-需要暴露的一些参数：
-1. 语言类型 ： 中文、韩文、日文、法文、德文、西班牙文、阿拉伯文、拉丁文、藏文
-    * 用于自动适配font，corpus
-2. 文字翻转类配置
-    * 用于配置是否翻转文字，哪些文字需要翻转等。
 
-
-
-
-"""
 cv2.setNumThreads(1)
 
 STOP_TOKEN = "kill"
-index = Value('i', 0)
 
-# each child process will initialize Render in process_setup
+# 单进程模式和进程池 worker 都通过 process_setup 初始化这两个对象。
 render: Render
+worker_data_queue = None
 
 
 class DBWriterProcess(Process):
     def __init__(
-            self,
-            dataset_cls: LmdbDataset,
-            data_queue,
-            generator_cfg: GeneratorCfg,
-            log_period: float = 1,
-            dataset_kwargs=None,
+        self,
+        dataset_cls: LmdbDataset,
+        data_queue,
+        generator_cfg: GeneratorCfg,
+        log_period: float = 1,
+        dataset_kwargs=None,
     ):
         super().__init__()
         self.dataset_cls = dataset_cls
@@ -53,61 +79,100 @@ class DBWriterProcess(Process):
     def run(self):
         num_image = self.generator_cfg.num_image
         save_dir = self.generator_cfg.save_dir
-        log_period = max(1, int(self.log_period / 100 * num_image))
+        log_interval = max(1, int(self.log_period / 100 * num_image))
         try:
             with self.dataset_cls(str(save_dir), **self.dataset_kwargs) as db:
                 exist_count = db.read_count()
                 count = 0
-                logger.info(f"Exist image count in {save_dir}: 【{exist_count}】")
+                logger.info("Exist image count in {}: {}", save_dir, exist_count)
                 start = time.time()
                 while True:
-                    m = self.data_queue.get()
-                    if m == STOP_TOKEN:
-                        logger.info("DBWriterProcess receive stop token")
+                    data = self.data_queue.get()
+                    if data == STOP_TOKEN:
                         break
 
                     name = "{:09d}".format(exist_count + count)
-                    db.write('id-' + name, m["image"], m["label"], m["bbox"], m["font"])
+                    db.write(
+                        "id-" + name,
+                        data["image"],
+                        data["label"],
+                        data["bbox"],
+                        data["font"],
+                    )
                     count += 1
-                    if count % log_period == 0:
+                    if count % log_interval == 0:
+                        elapsed = time.time() - start
                         logger.info(
-                            f"{(count / num_image) * 100:.2f}%({count}/{num_image}) {log_period / (time.time() - start + 1e-8):.1f} img/s"
+                            "{:.2f}%({}/{}) {:.1f} img/s",
+                            count / num_image * 100,
+                            count,
+                            num_image,
+                            log_interval / (elapsed + 1e-8),
                         )
                         start = time.time()
+
                 db.write_count(count + exist_count)
-                logger.info(f"{(count / num_image) * 100:.2f}%({count}/{num_image})")
-                logger.info(f"Finish generate: {count}. Total: {exist_count + count}")
-        except Exception as e:
+                logger.info(
+                    "Finish generate: {}. Total in dataset: {}",
+                    count,
+                    exist_count + count,
+                )
+        except Exception:
             logger.exception("DBWriterProcess error")
-            raise e
+            raise
 
 
-def generate_img(data_queue):
+def generate_img() -> bool:
+    """Render one image and put it into the writer queue."""
+    if worker_data_queue is None:
+        raise RuntimeError("Generator worker has not been initialized")
+
     try:
-        # print('多进程断点处')
         data = render()
     except Imgerror as error:
-        data = None
         logger.warning("Skip image after render retries: {}", error)
+        return False
 
-    if data is not None:
-        data_queue.put({"image": data[0], "label": data[1], "bbox": data[2], 'font': data[3]})
+    worker_data_queue.put(
+        {
+            "image": data[0],
+            "label": data[1],
+            "bbox": data[2],
+            "font": data[3],
+        }
+    )
+    return True
 
 
-def process_setup(*args):
-    # render 的配置部分
-    global render
+def generate_batch(num_attempts: int) -> int:
+    """Generate a small batch to reduce process-pool scheduling overhead."""
+    return sum(generate_img() for _ in range(num_attempts))
+
+
+def process_setup(render_cfg, data_queue):
+    """Initialize process-local render state and its shared output queue."""
+    global render, worker_data_queue
     import numpy as np
 
-    # Make sure different process has different random seed
     np.random.seed()
+    render = Render(render_cfg)
+    worker_data_queue = data_queue
+    logger.info("Finish setup image generate process: {}", os.getpid())
 
-    render = Render(args[0])
-    logger.info(f"Finish setup image generate process: {os.getpid()}")
+
+def iter_task_batch_sizes(total: int, batch_size: int) -> Iterable[int]:
+    """Yield batch sizes whose sum equals total."""
+    full_batches, remainder = divmod(total, batch_size)
+    for _ in range(full_batches):
+        yield batch_size
+    if remainder:
+        yield remainder
 
 
 def parse_args(arg_list: list = None):
-    parser = argparse.ArgumentParser(description="Generate OCR text images")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "--config",
         default="./example_data/multilingual.yaml",
@@ -124,10 +189,7 @@ def parse_args(arg_list: list = None):
     parser.add_argument("--num-images", type=int, default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--log-period", "--log_period", type=float, default=None)
-    if arg_list is None:
-        return parser.parse_args()
-    else:
-        return parser.parse_args(arg_list)
+    return parser.parse_args(arg_list)
 
 
 def apply_cli_overrides(app_cfg: AppCfg, args):
@@ -184,66 +246,105 @@ def join_writer_process(process):
         )
 
 
+def stop_writer_after_error(writer_process, data_queue):
+    """Best-effort writer shutdown without hiding the original worker error."""
+    if writer_process.is_alive():
+        try:
+            data_queue.put(STOP_TOKEN, timeout=5)
+        except queue.Full:
+            writer_process.terminate()
+    writer_process.join(timeout=30)
+    if writer_process.is_alive():
+        writer_process.terminate()
+        writer_process.join()
 
-if __name__ == "__main__":
-    '''
-    单进程，多进程，和书脊渲染的逻辑，存在不少冗余，比如颜色变换，存在三处。需要合并逻辑
-    
-    
-    '''
 
-    r'''
-    当前困惑：不支持字体是如何使程序的计数出现问题，导致 data_queue.put(STOP_TOKEN) 没有执行的。
-    
-    40 extra bytes in post.stringData array:
-    
-    This problem is reported by fontTools, and it seems to be caused to a font file containing extra data. 
-    It’s just a warning, so if your PDF document doesn’t have any errors, you can safely ignore it.
-    
-    
-    font show: E:\lxd\OCR_project\OCR_SOURCE\font\font_show
-    font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
-    '''
+def run_generator(
+    generator_cfg: GeneratorCfg,
+    app_cfg: AppCfg,
+    dataset_cls,
+    dataset_kwargs,
+) -> int:
+    """Generate one configured dataset and return the successful image count."""
+    runtime = app_cfg.runtime
+    data_queue = mp.Queue(maxsize=runtime.queue_size)
+    writer_process = DBWriterProcess(
+        dataset_cls,
+        data_queue,
+        generator_cfg,
+        runtime.log_period,
+        dataset_kwargs,
+    )
+    writer_process.start()
+    completed = False
+    try:
+        if runtime.num_processes == 0:
+            process_setup(generator_cfg.render_cfg, data_queue)
+            generated_count = generate_batch(generator_cfg.num_image)
+        else:
+            batches = iter_task_batch_sizes(
+                generator_cfg.num_image, runtime.task_batch_size
+            )
+            pool = mp.Pool(
+                processes=runtime.num_processes,
+                initializer=process_setup,
+                initargs=(generator_cfg.render_cfg, data_queue),
+            )
+            try:
+                generated_count = sum(
+                    pool.imap_unordered(generate_batch, batches, chunksize=1)
+                )
+            except BaseException:
+                pool.terminate()
+                raise
+            else:
+                # Graceful shutdown lets every worker flush its Queue feeder thread.
+                pool.close()
+            finally:
+                pool.join()
 
-    args = parse_args()
+        if writer_process.exitcode is not None:
+            join_writer_process(writer_process)
+        data_queue.put(STOP_TOKEN)
+        join_writer_process(writer_process)
+        completed = True
+    except BaseException:
+        stop_writer_after_error(writer_process, data_queue)
+        raise
+    finally:
+        if not completed:
+            data_queue.cancel_join_thread()
+        data_queue.close()
+        if completed:
+            data_queue.join_thread()
+
+    skipped = generator_cfg.num_image - generated_count
+    logger.info(
+        "Generator '{}': {} successful, {} skipped",
+        generator_cfg.name,
+        generated_count,
+        skipped,
+    )
+    return generated_count
+
+
+def run(app_cfg: AppCfg):
+    dataset_cls = LmdbDataset if app_cfg.storage.dataset == "lmdb" else ImgDataset
+    dataset_kwargs = get_dataset_kwargs(app_cfg)
+    return [
+        run_generator(generator_cfg, app_cfg, dataset_cls, dataset_kwargs)
+        for generator_cfg in app_cfg.generators
+    ]
+
+
+def main(arg_list: list = None):
+    args = parse_args(arg_list)
     app_cfg = apply_cli_overrides(
         get_app_cfg(args.config, args.selected_languages), args
     )
-    dataset_cls = LmdbDataset if app_cfg.storage.dataset == "lmdb" else ImgDataset
-    dataset_kwargs = get_dataset_kwargs(app_cfg)
     mp.set_start_method("spawn", force=True)
-    manager = mp.Manager()
-    # using multiprocessing.Manager().Queue() is fine in every case and less troublesome.
-    # pay particular attention when using multiprocessing.Queue() because it can have undesired effects
-    data_queue = manager.Queue()
+    return run(app_cfg)
 
-    for generator_cfg in app_cfg.generators:
-        db_writer_process = DBWriterProcess(
-            dataset_cls,
-            data_queue,
-            generator_cfg,
-            app_cfg.runtime.log_period,
-            dataset_kwargs,
-        )
-        db_writer_process.start()
 
-        if app_cfg.runtime.num_processes == 0:
-            process_setup(generator_cfg.render_cfg)
-            for _ in range(generator_cfg.num_image):
-                generate_img(data_queue)
-            data_queue.put(STOP_TOKEN)
-            join_writer_process(db_writer_process)
-        else:
-            with mp.Pool(
-                    processes=app_cfg.runtime.num_processes,
-                    initializer=process_setup,
-                    initargs=(generator_cfg.render_cfg,),
-            ) as pool:
-                for _ in range(generator_cfg.num_image):
-                    pool.apply_async(generate_img, args=(data_queue,))
-
-                pool.close()
-                pool.join()
-
-            data_queue.put(STOP_TOKEN)
-            join_writer_process(db_writer_process)
+if __name__ == "__main__":
+    main()

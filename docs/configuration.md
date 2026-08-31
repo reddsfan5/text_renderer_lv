@@ -108,6 +108,28 @@ languages:
 语言档案还可用 `num_images` 和 `output_dir` 覆盖公共生成数量和输出目录。
 输出路径支持 `{timestamp}` 和 `{language}` 占位符。
 
+## 多进程性能参数
+
+```yaml
+runtime:
+  num_processes: 4
+  log_period: 2
+  queue_size: 64
+  task_batch_size: 8
+```
+
+- `num_processes`：渲染进程数；`0` 表示单进程调试。
+- `queue_size`：渲染结果等待写盘的最大数量。图片较大或内存较小时可降到
+  `16`～`32`。
+- `task_batch_size`：一个进程池任务连续生成的图片数，用于减少大批量任务的
+  调度开销；通常保持 `4`～`16` 即可。
+- `log_period`：写入进度日志的百分比间隔。
+
+程序使用原生有界进程队列，多个渲染进程生产数据，一个写入进程顺序写入
+图片或 LMDB。字体缓存和预加载背景在每个渲染进程中各占一份内存，因此不应
+盲目把进程数设置为逻辑 CPU 总数。小批量任务建议用 `0` 或 `1`，大批量任务
+从物理核心数的一半开始实测。
+
 ## 运行方式
 
 使用 YAML 中 `active_languages` 指定的语言：

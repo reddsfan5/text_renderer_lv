@@ -446,15 +446,25 @@ def _load_v1_root(root: Mapping[str, Any]) -> AppCfg:
         {"generator", "corpus", "font", "background"},
     )
     runtime_data = _mapping(root.get("runtime"), "runtime")
-    _validate_keys(runtime_data, "runtime", {"num_processes", "log_period"})
+    _validate_keys(
+        runtime_data,
+        "runtime",
+        {"num_processes", "log_period", "queue_size", "task_batch_size"},
+    )
     runtime = RuntimeCfg(
         num_processes=int(runtime_data.get("num_processes", 2)),
         log_period=float(runtime_data.get("log_period", 10)),
+        queue_size=int(runtime_data.get("queue_size", 64)),
+        task_batch_size=int(runtime_data.get("task_batch_size", 8)),
     )
     if runtime.num_processes < 0:
         raise ValueError("runtime.num_processes must be >= 0")
     if runtime.log_period <= 0:
         raise ValueError("runtime.log_period must be > 0")
+    if runtime.queue_size <= 0:
+        raise ValueError("runtime.queue_size must be > 0")
+    if runtime.task_batch_size <= 0:
+        raise ValueError("runtime.task_batch_size must be > 0")
 
     storage_data = _mapping(root.get("storage"), "storage")
     _validate_keys(

@@ -1,7 +1,9 @@
 from argparse import Namespace
 from pathlib import Path
 
-from main import apply_cli_overrides, parse_args
+import pytest
+
+from main import apply_cli_overrides, iter_task_batch_sizes, parse_args
 from text_renderer.config import (
     AppCfg,
     FixedPerspectiveTransformCfg,
@@ -12,6 +14,7 @@ from text_renderer.config.yaml_config import (
     _apply_length_policy,
     _build_v2_job_roots,
     _clean_line,
+    _load_v1_root,
 )
 from text_renderer.corpus.corpus import Corpus
 
@@ -144,3 +147,22 @@ def test_output_override_uses_language_names_for_multiple_generators():
 
     assert app_cfg.generators[0].save_dir == Path("output/chinese")
     assert app_cfg.generators[1].save_dir == Path("output/korean")
+
+
+def test_task_batches_cover_every_generation_attempt():
+    assert list(iter_task_batch_sizes(18, 8)) == [8, 8, 2]
+    assert list(iter_task_batch_sizes(3, 8)) == [3]
+
+
+@pytest.mark.parametrize("field", ["queue_size", "task_batch_size"])
+def test_runtime_performance_values_must_be_positive(field):
+    root = {
+        "runtime": {field: 0},
+        "generator": {"num_images": 1, "output_dir": "output"},
+        "corpus": {"path": "unused.txt"},
+        "font": {"dir": "unused-fonts", "size": [30, 36]},
+        "background": {"dir": "unused-backgrounds"},
+    }
+
+    with pytest.raises(ValueError, match=field):
+        _load_v1_root(root)

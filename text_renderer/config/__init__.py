@@ -233,6 +233,8 @@ class GeneratorCfg:
 class RuntimeCfg:
     num_processes: int = 2
     log_period: float = 10
+    queue_size: int = 64
+    task_batch_size: int = 8
 
 
 @dataclass
