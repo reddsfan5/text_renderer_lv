@@ -13,14 +13,17 @@ from lv_tools.str_utils.text_rotate import is_need_rotate
 
 from lv_tools.corpus.digit_str_gen import DigitGenerator
 from lv_tools.corpus.series_text import one_line_text_2_multi_line_text
-from text_renderer.utils.font_text import FontText
+from text_renderer.utils.font_text import FontText, font_getsize
 
 dg = DigitGenerator()
 
 
 class Imgerror(RuntimeError):
     def __init__(self, arg=None):
-        self.args = arg
+        if arg is None:
+            super().__init__()
+        else:
+            super().__init__(arg)
 
 
 def transparent_img(size: Tuple[int, int]) -> PILImage:
@@ -75,7 +78,7 @@ def draw_text_on_bg_hv(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        size = font_getsize(font_text.font, c)
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -221,7 +224,7 @@ def draw_text_on_bg_hv_no_pad(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        size = font_getsize(font_text.font, c)
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -504,7 +507,7 @@ def draw_text_on_bg(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        size = font_getsize(font_text.font, c)
         if is_need_rotate(c):
             chars_size.append(size)
             widths.append(size[0])
@@ -610,7 +613,7 @@ def draw_text_on_bg_backup(
     heights = []
 
     for c in font_text.text:
-        size = font_text.font.getsize(c)
+        size = font_getsize(font_text.font, c)
         chars_size.append(size)
         widths.append(size[0])
         heights.append(size[1])

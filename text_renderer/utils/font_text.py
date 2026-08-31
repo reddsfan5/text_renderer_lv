@@ -4,6 +4,22 @@ from PIL.ImageFont import FreeTypeFont
 from fontTools.ttLib import ttFont
 
 
+def font_getsize(font: FreeTypeFont, text: str):
+    """Return the legacy Pillow ``getsize`` result on old and new versions."""
+    if hasattr(font, "getsize"):
+        return font.getsize(text)
+    _, _, right, bottom = font.getbbox(text)
+    return right, bottom
+
+
+def font_getoffset(font: FreeTypeFont, text: str):
+    """Return the legacy Pillow ``getoffset`` result on old and new versions."""
+    if hasattr(font, "getoffset"):
+        return font.getoffset(text)
+    left, top, _, _ = font.getbbox(text)
+    return left, top
+
+
 @dataclass
 class FontText:
     font: FreeTypeFont
@@ -13,13 +29,13 @@ class FontText:
 
     @property
     def xy(self):
-        offset = self.font.getoffset(self.text)
+        offset = font_getoffset(self.font, self.text)
         left, top, right, bottom = self.font.getmask(self.text).getbbox()
         return 0 - offset[0] - left, 0 - offset[1]
 
     @property
     def offset(self):
-        return self.font.getoffset(self.text)
+        return font_getoffset(self.font, self.text)
 
     @property
     def size(self) -> [int, int]:
@@ -30,16 +46,20 @@ class FontText:
             width, height
         """
         if self.horizontal:
-            offset = self.font.getoffset(self.text)
-            size = self.font.getsize(self.text)
+            offset = font_getoffset(self.font, self.text)
+            size = font_getsize(self.font, self.text)
             width = size[0] - offset[0]
             height = size[1] - offset[1]
             left, top, right, bottom = self.font.getmask(self.text).getbbox()
             return right - left, height
         else:
-            widths = [self.font.getsize(c)[0] - self.font.getoffset(c)[0] for c in self.text]
+            widths = [
+                font_getsize(self.font, c)[0] - font_getoffset(self.font, c)[0]
+                for c in self.text
+            ]
             width = max(widths)
-            height = sum([self.font.getsize(c)[1] for c in self.text]) - self.font.getoffset(self.text[0])[1]
+            height = sum(font_getsize(self.font, c)[1] for c in self.text)
+            height -= font_getoffset(self.font, self.text[0])[1]
             return height, width
 if __name__ == '__main__':
 
