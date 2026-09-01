@@ -124,13 +124,11 @@ class Render:
             #     save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
             # )
             text_mask, bbox, font_base = draw_text_on_bg_hv(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing
             )
         elif write_mode == 'multiline':
             text_mask, bbox, font_base = draw_text_on_bg_multi_line(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing
             )
 
         if self.cfg.corpus_effects is not None:
@@ -369,13 +367,11 @@ class RenderOne(Render):
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':
             text_mask, bbox, font_base = draw_text_on_bg_hv(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing
             )
         elif write_mode == 'multiline':
             text_mask, bbox, font_base = draw_text_on_bg_multi_line(
-                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing,
-                save_dir=r'D:\lxd_code\OCR\OCR_SOURCE\font\font_show'
+                font_text, text_color, char_spacing=self.corpus.cfg.char_spacing
             )
 
         if self.cfg.corpus_effects is not None:

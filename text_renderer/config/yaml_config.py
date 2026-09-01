@@ -136,6 +136,11 @@ def _load_corpus_items(data: Mapping[str, Any], num_images: int) -> List[str]:
     if long_text not in {"split", "truncate", "drop"}:
         raise ValueError("corpus.long_text must be split, truncate, or drop")
 
+    capacity_multiplier = float(data.get("capacity_multiplier", 1.0))
+    if capacity_multiplier <= 0:
+        raise ValueError("corpus.capacity_multiplier must be > 0")
+    target_count = max(num_images, int(math.ceil(num_images * capacity_multiplier)))
+
     items = []
     with path.open("r", encoding="utf-8-sig") as corpus_file:
         for raw_line in corpus_file:
@@ -149,24 +154,21 @@ def _load_corpus_items(data: Mapping[str, Any], num_images: int) -> List[str]:
             )
             if not text:
                 continue
-            items.extend(
-                _apply_length_policy(
-                    text,
-                    min_length,
-                    max_length,
-                    long_text,
-                )
+            candidates = _apply_length_policy(
+                text,
+                min_length,
+                max_length,
+                long_text,
             )
+            items.extend(candidates[: target_count - len(items)])
+            if len(items) >= target_count:
+                break
 
     if not items:
         raise ValueError(f"Corpus is empty after filtering: {path}")
 
-    capacity_multiplier = float(data.get("capacity_multiplier", 1.0))
-    if capacity_multiplier <= 0:
-        raise ValueError("corpus.capacity_multiplier must be > 0")
-    target_count = max(num_images, int(math.ceil(num_images * capacity_multiplier)))
     if len(items) < target_count:
-        items *= int(math.ceil(target_count / len(items)))
+        items = (items * int(math.ceil(target_count / len(items))))[:target_count]
     return items
 
 

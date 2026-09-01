@@ -30,7 +30,7 @@ def text_render():
 
 
 if __name__ == '__main__':
-    config_path = r'.\example_data\config_for_book_spine_info_gen.py'
+    config_path = Path(__file__).resolve().parents[2] / "configs/legacy/book_spine.py"
     # book_excel_path = r'F:\dataset\OCR\图书目录\书脊分类信息生成数据\格式模板-现货数据-mini.xlsx' # 仅供调试用
     book_excel_path = r'F:\dataset\OCR\图书目录\书脊分类信息生成数据\格式模板-现货数据-mini.xlsx'
     # callnumber_excel_path = r'F:\dataset\OCR\callnumber_gen\索书号.xlsx'

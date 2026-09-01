@@ -3,7 +3,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Tuple
 
-import numpy as np
 from PIL import Image
 from PIL.Image import Image as PILImage
 from loguru import logger
@@ -31,10 +30,16 @@ class BgManager:
         assert len(self.bg_paths) != 0, "background image is empty"
 
     def _is_transparent_image(self, p: Path):
-        pil_img: PILImage = Image.open(p)
-        pil_img = pil_img.convert("RGBA")
-        np_img = np.array(pil_img)
-        return not np.all(np_img[:, :, 3] == 255)
+        # JPEG/BMP do not carry an alpha channel. Most background sets use JPEG,
+        # so avoid decoding every file once for this check and again for preload.
+        if p.suffix.lower() in {".jpg", ".jpeg", ".bmp"}:
+            return False
+
+        with Image.open(p) as pil_img:
+            if pil_img.mode not in {"RGBA", "LA"} and "transparency" not in pil_img.info:
+                return False
+            alpha = pil_img.convert("RGBA").getchannel("A")
+            return alpha.getextrema()[0] < 255
 
     def get_bg(self) -> PILImage:
         # TODO: add efficient data augmentation

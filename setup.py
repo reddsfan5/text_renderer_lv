@@ -11,4 +11,5 @@ setup(
     packages=find_packages(),
     python_requires=">=3.6",
     install_requires=["PyYAML>=5.1"],
+    entry_points={"console_scripts": ["text-renderer=text_renderer.cli:main"]},
 )

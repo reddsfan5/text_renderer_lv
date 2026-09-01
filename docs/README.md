@@ -2,7 +2,7 @@
 Generate text line images for training deep learning OCR model (e.g. [CRNN](https://github.com/bgshih/crnn)). ![example](./image/example.gif)
 
 - [x] Modular design. You can easily add different components: [Corpus](https://oh-my-ocr.github.io/text_renderer/corpus/index.html), [Effect](https://oh-my-ocr.github.io/text_renderer/effect/index.html), [Layout](https://oh-my-ocr.github.io/text_renderer/layout/index.html).
-- [x] Integrate with [imgaug](https://github.com/aleju/imgaug), see [imgaug_example](https://github.com/oh-my-ocr/text_renderer/blob/master/example_data/example.py#L184) for usage.
+- [x] Integrate with [imgaug](https://github.com/aleju/imgaug), see [the Python config example](../configs/examples/basic.py) for usage.
 - [x] Support render multi corpus on image with different effects. [Layout](https://oh-my-ocr.github.io/text_renderer/layout/index.html) is responsible for the layout between multiple corpora
 - [x] Support apply effects on different stages of rendering process [corpus_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg), [layout_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg), [render_effects](https://oh-my-ocr.github.io/text_renderer/config.html#text_renderer.config.RenderCfg).
 - [x] Generate vertical text.
@@ -21,7 +21,7 @@ cd text_renderer
 python3 setup.py develop
 pip3 install -r docker/requirements.txt
 python3 main.py \
-    --config example_data/example.py \
+    --config configs/examples/basic.py \
     --dataset img \
     --num_processes 2 \
     --log_period 10
@@ -54,7 +54,7 @@ You can also use `--dataset lmdb` to store image in lmdb file, lmdb file contain
 - label-000000000
 - size-000000000
 
-You can check config file [example_data/example.py](https://github.com/oh-my-ocr/text_renderer/blob/master/example_data/example.py) to learn how to use text_renderer,
+You can check [configs/examples/basic.py](../configs/examples/basic.py) to learn how to use text_renderer,
 or follow the [Quick Start](https://github.com/oh-my-ocr/text_renderer#quick-start) to learn how to setup configuration
  
 
@@ -156,7 +156,7 @@ Run `main.py`, it only has 4 arguments:
 
 ## All Effect/Layout Examples
 
-Find all effect/layout config example at [link](https://github.com/oh-my-ocr/text_renderer/blob/master/example_data/effect_layout_example.py)
+Find all effect/layout config examples in [configs/examples/effect_layout.py](../configs/examples/effect_layout.py).
 
 - `bg_and_text_mask`: Three images of the same width are merged together horizontally, 
   it can be used to train GAN model like [EraseNet](https://github.com/lcy0604/EraseNet)
@@ -211,7 +211,7 @@ so we map this directory to the host.
 ```bash
 docker run --rm \
 -v `pwd`/example_data/docker_output/:/app/example_data/output \
---env CONFIG=/app/example_data/example.py \
+--env CONFIG=/app/configs/examples/basic.py \
 --env DATASET=img \
 --env NUM_PROCESSES=2 \
 --env LOG_PERIOD=10 \

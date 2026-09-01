@@ -15,7 +15,7 @@ from lv_tools.data_parsing.labelme_json_constructor import construct_one_shape, 
 from lv_tools.img_tools.bg_gen import BgGener
 from lv_tools.img_tools.img_resize import ImgResizeWithPadding
 from lv_tools.task_ocr.text_data_4m import TextData4mWordKey
-from main_single_process_for_debug import DBWriterProcess
+from scripts.generate.single_process_debug import DBWriterProcess
 from text_renderer.config import get_cfg, SafeTextColorCfg
 from text_renderer.corpus.book_spine_corpus import TextCorpusGen
 from text_renderer.dataset import LmdbDataset
@@ -81,7 +81,7 @@ def mimic_en_book_spine(root_4m: str = r'D:\lxd_code\OCR\OCR_SOURCE\text_data\Un
                         ann_word_path: str = r'D:\lxd_code\OCR\OCR_SOURCE\text_data\Union14M-L\entire\word_pathlist_horizontal.json',
                         bg_dir: str = r'D:\lxd_code\bar_dm\dm_bar_base\indoorCVPR_09\Images',
                         dst_dir: str = r'F:\dataset\OCR\3-2.book_info_classes\syn_entire_img_rec_book_info\syn_en_book_spine_expand_5_250103',
-                        cfg_path: str = r'./example_data/effect_layout_example.py',
+                        cfg_path: str = r'./configs/examples/effect_layout.py',
                         corpus_file_path: str = r'F:\dataset\OCR\图书目录\english_book\Open_Library_ol_dump_works_2023-02-28_title.txt',
                         book_spine_h: int = 1200,
                         book_spine_w: int = 120,
@@ -129,7 +129,7 @@ class Config:
 
 def gen_word_rec_piece(root_char_img_dir: str = r'D:\lxd_code\OCR\OCR_SOURCE\text_data\Union14M-L\full_images',
                        ann_word_path: str = r'D:\lxd_code\OCR\OCR_SOURCE\text_data\Union14M-L\entire\word_pathlist_horizontal.json',
-                       cfg_path: str = r'./example_data/effect_layout_example.py',
+                       cfg_path: str = r'./configs/examples/effect_layout.py',
                        corpus_file_path: str = r'F:\dataset\OCR\图书目录\english_book\Open_Library_ol_dump_works_2023-02-28_title.txt',
                        bg_dir: str = r'D:\lxd_code\bar_dm\dm_bar_base\indoorCVPR_09\pure',
                        spliter: str = ' ',
@@ -202,9 +202,9 @@ def gen_word_rec_piece(root_char_img_dir: str = r'D:\lxd_code\OCR\OCR_SOURCE\tex
 
 if __name__ == "__main__":
     r'''    
-    --config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config .\configs/examples/effect_layout.py --dataset lmdb --num_processes 1 --log_period 2
     
-    --config .\example_data/example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config .\configs/examples/basic.py --dataset lmdb --num_processes 1 --log_period 2
 
     font show: E:\lxd\OCR_project\OCR_SOURCE\font\font_show
     font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     # ann_word_path: str = r'D:\lxd_code\OCR\OCR_SOURCE\text_data\Union14M-L\entire\word_pathlist_horizontal.json'
     # bg_dir: str = r'D:\lxd_code\bar_dm\dm_bar_base\indoorCVPR_09\Images'
     # dst_dir: str = r'F:\dataset\OCR\3-2.book_info_classes\syn_entire_img_rec_book_info\syn_en_book_spine_expand_5_1217'
-    # cfg_path: str = r'./example_data/effect_layout_example.py'
+    # cfg_path: str = r'./configs/examples/effect_layout.py'
     # corpus_file_path: str = r'F:\dataset\OCR\图书目录\english_book\Open_Library_ol_dump_works_2023-02-28_title.txt'
     # book_spine_h: int = 1200
     # book_spine_w: int = 120

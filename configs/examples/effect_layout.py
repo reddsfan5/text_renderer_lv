@@ -1,6 +1,5 @@
 import inspect
 import itertools
-import os
 import random
 import time
 from pathlib import Path
@@ -324,17 +323,18 @@ text_path_dict = {
     'spa':r'F:\dataset\OCR\图书目录\text\Spanish\valid_spanish_drop_dup_cut_long.txt',
     'rus':r'F:\dataset\OCR\图书目录\text\russian\test.txt',
     'tib':r'F:\dataset\OCR\图书目录\text\tibetan\n-bo_normed_mini.txt',
-    'kor':r'F:\dataset\OCR\图书目录\text\korea\Kor_book_name_author_publisher-280w.txt',
+    # 'kor':r'F:\dataset\OCR\图书目录\text\korea\Kor_book_name_author_publisher-280w.txt',
+    'kor':r'F:\dataset\OCR\图书目录\text\korea\korean_missing_chars_corpus_10w.txt',
     'ger':r'F:\dataset\OCR\图书目录\foreign_book\german\openlib_german.txt'
 }
-txt_path =text_path_dict['jp_callnumber']
+txt_path =text_path_dict['kor']
 
 text_list = text_list_gen(txt_path = txt_path,chr_set=chr_set,is_add_space=False)
 print('corpus读取完毕')
 
 # start,end = data_split_start_end(text_list)
 # text_list = text_list[start:end]
-NUM_IMG:int = int(1*10**5)
+NUM_IMG:int = int(1*10**2)
 # text_list = series_text_gen(data_num=NUM_IMG)
 
 local_time = time.localtime()
@@ -343,7 +343,7 @@ DST_DIR = Path(fr'F:\dataset\OCR\3.text_rec\synthesis\rec_pieces\lmdb_datatest_{
 # BG_DIR = Path(r'F:\dataset\OCR\callnumber_gen\callnumber_bg')
 BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg\bg_pure')
 # BG_DIR = Path(r'D:\lxd_code\OCR\OCR_SOURCE\bg\bg_white')
-CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
+CURRENT_DIR = Path(__file__).resolve().parents[2] / "example_data"
 
 FONT_SMP = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\简体-简体-低风险')
 FONT_MINI = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\font_mini')
@@ -359,7 +359,7 @@ FONT_RUS = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\俄文\70-potryasayus
 FONT_TIB = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\藏文')
 FONT_GER = Path(r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\english\jinke_miaomu_done\en_fr_jinke_miaomu_done\eng_fre_spa_ger')
 font_cfg = dict(
-    font_dir=FONT_JAPAN,
+    font_dir=FONT_KOREA,
     font_size=(30, 36),# 34,36
     # sp_font_excel_path=r'D:\lxd_code\OCR\OCR_SOURCE\font\索书号字体.xlsx'
 

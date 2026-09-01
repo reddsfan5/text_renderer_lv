@@ -1,7 +1,7 @@
 # YAML 配置说明
 
 主入口 `main.py` 支持 YAML 配置和原有 Python 配置。推荐使用
-`example_data/multilingual.yaml`：它把公共生成参数放在顶层，把相互耦合的
+`configs/multilingual.yaml`：它把公共生成参数放在顶层，把相互耦合的
 语料、字符集、字体和文字排版放进同一个语言档案。
 
 配置优先级为：命令行参数 > YAML 参数 > 程序默认值。
@@ -135,20 +135,20 @@ runtime:
 使用 YAML 中 `active_languages` 指定的语言：
 
 ```powershell
-python main.py --config example_data/multilingual.yaml
+python main.py --config configs/multilingual.yaml
 ```
 
 临时只生成藏文：
 
 ```powershell
-python main.py --config example_data/multilingual.yaml --language tibetan
+python main.py --config configs/multilingual.yaml --language tibetan
 ```
 
 一次生成中文和韩文；`--language` 可重复使用：
 
 ```powershell
 python main.py `
-  --config example_data/multilingual.yaml `
+  --config configs/multilingual.yaml `
   --language chinese `
   --language korean
 ```
@@ -157,7 +157,7 @@ python main.py `
 
 ```powershell
 python main.py `
-  --config example_data/multilingual.yaml `
+  --config configs/multilingual.yaml `
   --language korean `
   --num-images 20 `
   --output-dir F:/dataset/OCR/smoke_test `
@@ -170,11 +170,11 @@ python main.py `
 原来的 Python 配置仍可使用：
 
 ```powershell
-python main.py --config example_data/effect_layout_example.py --dataset lmdb
+python main.py --config configs/examples/effect_layout.py --dataset lmdb
 ```
 
 旧版单语言 YAML（`version: 1`）也继续兼容，例如
-`example_data/korean_vertical.yaml`，但它不支持 `--language`。
+`configs/korean_vertical.yaml`，但它不支持 `--language`。
 
 ## 命令行核心参数
 
@@ -206,6 +206,21 @@ python main.py --config example_data/effect_layout_example.py --dataset lmdb
 - `dropout_vertical`
 - `emboss`
 - `motion_blur`
+
+### 字间距
+
+字间距属于语言档案中的文字排版配置：
+
+```yaml
+text:
+  orientation: horizontal
+  char_spacing: 0
+```
+
+- `0`：不增加额外字间距；
+- 正数或负数：按当前文字高度的比例增加或压缩字距；
+- `[min, max]`：为每个字符从该比例范围随机取值；
+- `-1`：使用字体原生的整行绘制方式，仅适用于不需要显式逐字间距控制的情况。
 
 复杂的多语料布局和自定义 Python 增强器仍可使用 Python 配置，避免把 YAML
 变成另一套程序语言。

@@ -2,9 +2,11 @@ version: 2
 
 # 公共运行参数。命令行参数优先于这里的值。
 runtime:
-  num_processes: 0
+  num_processes: 6
   log_period: 2
+  # 有界队列避免大量高分辨率图片同时驻留内存。
   queue_size: 64
+  # 每个进程池任务连续生成的图片数，减少百万级任务的调度开销。
   task_batch_size: 8
 
 storage:
@@ -16,8 +18,8 @@ storage:
 
 generator:
   # 可同时启用多个语言，也可用 --language 临时覆盖。
-  active_languages: [korean]
-  num_images: 100
+  active_languages: [callnumber]
+  num_images: 300000
   output_dir: "F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/lmdb_yaml_{timestamp}/{language}"
 
 # 背景和渲染参数默认由所有语言共享；语言档案内可按需覆盖。
@@ -67,27 +69,52 @@ languages:
       char_spacing: 0
       join_str: ""
 
-  korean_catalog:
+  callnumber:
     corpus:
-      path: "F:/dataset/OCR/图书目录/text/korea/Kor_book_name_author_publisher-280w.txt"
+      path: "D:/lxd_code/OCR/OCR_SOURCE/corpus/call_number/bjcy_callnumber_100w_with_parentheses.txt"
       charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
       strip: true
       normalize_spaces: true
-      remove_punctuation: true
+      remove_punctuation: false
       allowed_punctuation: "！？"
-      min_length: 2
-      max_length: 12
+      min_length: 5
+      max_length: 20
       long_text: split
       capacity_multiplier: 1.2
     font:
-      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/韩文"
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/简体-简体-低风险/常规类_已更正/等宽"
       size: [30, 36]
     text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
+      orientation: horizontal
+      rotate_characters: false
+      # 额外字间距按文字高度的比例计算；0 表示不增加，[min, max] 表示随机范围。
+      clip_length: 30
       char_spacing: 0
       join_str: ""
+
+
+
+  # korean_catalog:
+  #   corpus:
+  #     path: "F:/dataset/OCR/图书目录/text/korea/Kor_book_name_author_publisher-280w.txt"
+  #     charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
+  #     strip: true
+  #     normalize_spaces: true
+  #     remove_punctuation: true
+  #     allowed_punctuation: "！？"
+  #     min_length: 2
+  #     max_length: 12
+  #     long_text: split
+  #     capacity_multiplier: 1.2
+  #   font:
+  #     dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/韩文"
+  #     size: [30, 36]
+  #   text:
+  #     orientation: vertical
+  #     rotate_characters: true
+  #     clip_length: 12
+  #     char_spacing: 0
+  #     join_str: ""
 
   chinese:
     corpus:

@@ -1,6 +1,6 @@
 # 多行索书号识别 LMDB 生成器
 
-脚本：[`main_callnumber_rec_multiline_lmdb.py`](../main_callnumber_rec_multiline_lmdb.py)
+脚本：[`callnumber_rec_multiline_lmdb.py`](../scripts/generate/callnumber_rec_multiline_lmdb.py)
 
 该脚本用于生成多行索书号识别切片，并直接写入 LMDB。每条记录包含图像、完整文本标签、四点文本框、分数、文件名和字体文件名，可用于 OCR 识别训练及检测/识别联合数据。
 
@@ -9,7 +9,7 @@
 在仓库根目录执行：
 
 ```powershell
-python .\main_callnumber_rec_multiline_lmdb.py --num 10000 --out .\callnumber_lmdb
+python -m scripts.generate.callnumber_rec_multiline_lmdb --num 10000 --out .\callnumber_lmdb
 ```
 
 默认使用 `learned` 策略和内置索书号分布模型，不需要 Excel、pandas 或任何索书号数据文件。
@@ -18,20 +18,20 @@ python .\main_callnumber_rec_multiline_lmdb.py --num 10000 --out .\callnumber_lm
 
 ```powershell
 # 固定随机种子，生成 50000 条
-python .\main_callnumber_rec_multiline_lmdb.py --num 50000 --seed 2026 --out .\callnumber_lmdb
+python -m scripts.generate.callnumber_rec_multiline_lmdb --num 50000 --seed 2026 --out .\callnumber_lmdb
 
 # 使用语法策略，而不是内置分布策略
-python .\main_callnumber_rec_multiline_lmdb.py --generator-strategy grammar --num 10000
+python -m scripts.generate.callnumber_rec_multiline_lmdb --generator-strategy grammar --num 10000
 
 # 首行大写字母按内置统计频率采样；默认是 A-Z 均匀采样
-python .\main_callnumber_rec_multiline_lmdb.py --line1-letter-mode learned --num 10000
+python -m scripts.generate.callnumber_rec_multiline_lmdb --line1-letter-mode learned --num 10000
 ```
 
 运行前需要确保渲染器已经配置可用字体。输出目录是 LMDB 目录，脚本完成后可直接交给现有 OCR 数据读取流程。
 
 ## 索书号生成策略
 
-策略接口定义在 [`call_number_generator.py`](../call_number_generator.py)。两种策略都实现 `generate()` 和 `summary()`，每次调用 `generate()` 返回一个按书写顺序排列的非空行列表。
+策略接口定义在 [`call_number_generator.py`](../text_renderer/corpus/call_number_generator.py)。两种策略都实现 `generate()` 和 `summary()`，每次调用 `generate()` 返回一个按书写顺序排列的非空行列表。
 
 ### `learned`：内置分布模型
 
@@ -58,7 +58,7 @@ python .\main_callnumber_rec_multiline_lmdb.py --line1-letter-mode learned --num
 `--patterns` 接收 JSON 数组。每项包含 `lengths` 和可选的 `weight`：
 
 ```powershell
-python .\main_callnumber_rec_multiline_lmdb.py `
+python -m scripts.generate.callnumber_rec_multiline_lmdb `
   --patterns '[{"lengths":[2,2,2],"weight":1.5},{"lengths":[2,1,0],"weight":2.5},{"lengths":[0,0,3],"weight":1}]' `
   --num 10000
 ```
@@ -71,7 +71,7 @@ python .\main_callnumber_rec_multiline_lmdb.py `
 - `weight` 是该结构被采样的相对权重，至少有一个结构权重大于 0；
 - 长度统计的是最终可见字符数，`.`、`-`、`=`、`(`、`)`、`v` 等字符都计入长度。
 
-脚本内置的默认结构位于 `main_callnumber_rec_multiline_lmdb.py` 的 `_DEFAULT_PATTERNS`，当前包含 `[2,2,2]`、`[3,3,3]`、`[2,1,1]`、`[4,4,0]`、`[5,5,0]`、`[6,6,0]`、`[7,7,0]`、`[2,1,0]`、`[2,0,2]` 和 `[3,0,3]`。
+脚本内置的默认结构位于 `scripts.generate.callnumber_rec_multiline_lmdb` 的 `_DEFAULT_PATTERNS`，当前包含 `[2,2,2]`、`[3,3,3]`、`[2,1,1]`、`[4,4,0]`、`[5,5,0]`、`[6,6,0]`、`[7,7,0]`、`[2,1,0]`、`[2,0,2]` 和 `[3,0,3]`。
 
 ## 图像合成和增强
 
@@ -101,7 +101,7 @@ rotation_probability = 0.5
 可通过以下参数调整：
 
 ```powershell
-python .\main_callnumber_rec_multiline_lmdb.py `
+python -m scripts.generate.callnumber_rec_multiline_lmdb `
   --rotation-aspect-ratio-threshold-l 0.8 `
   --rotation-aspect-ratio-threshold-r 1.8 `
   --rotation-prob 0.35
@@ -119,7 +119,7 @@ python .\main_callnumber_rec_multiline_lmdb.py `
 示例：
 
 ```powershell
-python .\main_callnumber_rec_multiline_lmdb.py `
+python -m scripts.generate.callnumber_rec_multiline_lmdb `
   --output-scale 0.5 `
   --side-ratio 1.5 `
   --noise `
@@ -154,13 +154,13 @@ I12 34=5 2024
 查看完整参数：
 
 ```powershell
-python .\main_callnumber_rec_multiline_lmdb.py --help
+python -m scripts.generate.callnumber_rec_multiline_lmdb --help
 ```
 
 验证代码语法：
 
 ```powershell
-python -m py_compile .\call_number_generator.py .\main_callnumber_rec_multiline_lmdb.py
+python -m py_compile .\text_renderer\corpus\call_number_generator.py .\scripts\generate\callnumber_rec_multiline_lmdb.py
 ```
 
 如果生成结果中出现行数或长度不符合预期，优先检查：

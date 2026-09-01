@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from main import apply_cli_overrides, iter_task_batch_sizes, parse_args
+from text_renderer.cli import apply_cli_overrides, parse_args
 from text_renderer.config import (
     AppCfg,
     FixedPerspectiveTransformCfg,
@@ -14,9 +14,11 @@ from text_renderer.config.yaml_config import (
     _apply_length_policy,
     _build_v2_job_roots,
     _clean_line,
+    _load_corpus_items,
     _load_v1_root,
 )
 from text_renderer.corpus.corpus import Corpus
+from text_renderer.runner import iter_task_batch_sizes
 
 
 def test_clean_line_keeps_only_allowed_punctuation():
@@ -33,6 +35,26 @@ def test_clean_line_keeps_only_allowed_punctuation():
 
 def test_split_long_text_respects_min_and_max_length():
     assert _apply_length_policy("가나다라마", 2, 2, "split") == ["가나", "다라"]
+
+
+def test_corpus_loader_caps_items_to_generation_capacity(tmp_path):
+    corpus_path = tmp_path / "corpus.txt"
+    corpus_path.write_text(
+        "\n".join(f"item-{index}" for index in range(10)), encoding="utf-8"
+    )
+
+    items = _load_corpus_items(
+        {
+            "path": str(corpus_path),
+            "min_length": 1,
+            "max_length": 20,
+            "capacity_multiplier": 1.5,
+            "remove_punctuation": False,
+        },
+        num_images=2,
+    )
+
+    assert items == ["item-0", "item-1", "item-2"]
 
 
 def test_fixed_perspective_uses_configured_angles():

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from build_korean_coverage_corpus import (
+from scripts.corpus.build_korean_coverage_corpus import (
     NOUNS,
     QUALIFIERS,
     extract_target_seeds,

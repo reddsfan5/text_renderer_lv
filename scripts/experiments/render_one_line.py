@@ -3,7 +3,7 @@ import colorsys
 import spacy
 from PIL import Image, ImageDraw, ImageFont
 
-from render_block_based_book_spine import FontChoice
+from text_renderer.render_block_based_book_spine import FontChoice
 
 
 def main1():

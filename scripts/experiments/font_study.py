@@ -4,7 +4,10 @@ from PIL import ImageFont,ImageDraw,Image
 import numpy as np
 
 from lv_tools.font.safe_font import FontChoice
-from render_block_based_book_spine import find_max_allowed_font_size, get_text_size_hv
+from text_renderer.render_block_based_book_spine import (
+    find_max_allowed_font_size,
+    get_text_size_hv,
+)
 from text_renderer.utils import FontText
 if __name__ == '__main__':
     font_path = r'D:\lxd_code\OCR\OCR_SOURCE\font\font_set\韩文\NanumMyeongjoEcoBold.ttf'

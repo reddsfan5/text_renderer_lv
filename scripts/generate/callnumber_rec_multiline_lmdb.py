@@ -19,9 +19,9 @@ Note: third-line ``v`` and ``.v`` prefixes are rendered verbatim and are also
 included verbatim in the transcription label.
 
 Usage:
-    python main_callnumber_rec_multiline_lmdb.py --out ./call_number_rec_multiline_lmdb --num 10000 --output-scale 0.5
-    python main_callnumber_rec_multiline_lmdb.py --patterns '[{"lengths":[2,2,2],"weight":1},{"lengths":[2,2,0],"weight":2},{"lengths":[0,0,3],"weight":1}]'
-    python main_callnumber_rec_multiline_lmdb.py --generator-strategy learned --num 10000
+    python -m scripts.generate.callnumber_rec_multiline_lmdb --out ./call_number_rec_multiline_lmdb --num 10000 --output-scale 0.5
+    python -m scripts.generate.callnumber_rec_multiline_lmdb --patterns '[{"lengths":[2,2,2],"weight":1},{"lengths":[2,2,0],"weight":2},{"lengths":[0,0,3],"weight":1}]'
+    python -m scripts.generate.callnumber_rec_multiline_lmdb --generator-strategy learned --num 10000
 """
 
 from datetime import datetime
@@ -40,8 +40,11 @@ import numpy as np
 from PIL import Image, ImageDraw
 from tqdm import tqdm
 
-import main_callnumber_det as call_number_renderer
-from call_number_generator import PatternConfig, build_call_number_generator
+from scripts.generate import callnumber_det as call_number_renderer
+from text_renderer.corpus.call_number_generator import (
+    PatternConfig,
+    build_call_number_generator,
+)
 from lv_tools.dataset_io.lmdb_backend import lmdb_2_min_size
 from lv_tools.lmdbs.workflows.ocr import (
     LmdbDataset,

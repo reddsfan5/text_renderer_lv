@@ -83,9 +83,9 @@ if __name__ == "__main__":
     '''
     # 代码都是针对写入lmdb 的逻辑进行改写的，没有维护写入img的逻辑，所以在写入img时，会报错。
     
-    --config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config .\configs/examples/effect_layout.py --dataset lmdb --num_processes 1 --log_period 2
     
-    --config .\example_data/example.py --dataset lmdb --num_processes 1 --log_period 2
+    --config .\configs/examples/basic.py --dataset lmdb --num_processes 1 --log_period 2
     '''
     r'''
     当前困惑：不支持字体是如何使程序的计数出现问题，导致 data_queue.put(STOP_TOKEN) 没有执行的。
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     font not suport: E:\lxd\OCR_project\OCR_SOURCE\font
     '''
 
-    arg_list = '--config .\example_data/effect_layout_example.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
+    arg_list = '--config .\configs/examples/effect_layout.py --dataset lmdb --num_processes 1 --log_period 2'.split(' ')
 
     if not sys.argv[1:]:
         args = parse_args(arg_list)

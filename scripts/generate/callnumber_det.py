@@ -9,7 +9,7 @@ The annotation label is:
     "call_number_label"
 
 Usage:
-    python main_callnumber_gpt.py --out ./call_number_labelme --num 1000 --width 1600 --height 640
+    python -m scripts.generate.callnumber_det --out ./call_number_labelme --num 1000 --width 1600 --height 640
 """
 
 from pathlib import Path

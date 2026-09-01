@@ -38,6 +38,20 @@ def transparent_img(size: Tuple[int, int]) -> PILImage:
     return Image.new("RGBA", (size[0], size[1]), (255, 255, 255, 0))
 
 
+def _alpha_bbox_points(image: PILImage) -> list:
+    """Return an inclusive four-point box around non-transparent pixels."""
+    bbox = image.getchannel("A").getbbox()
+    if bbox is None:
+        raise Imgerror("text mask is empty")
+    left, top, right, bottom = bbox
+    return [
+        [left, top],
+        [right - 1, top],
+        [right - 1, bottom - 1],
+        [left, bottom - 1],
+    ]
+
+
 
 def draw_text_on_bg_hv(
         font_text: FontText,
@@ -79,7 +93,7 @@ def draw_text_on_bg_hv(
 
     for c in font_text.text:
         size = font_getsize(font_text.font, c)
-        if font_text.rotate_chars and is_need_rotate(c):
+        if font_text.horizontal or (font_text.rotate_chars and is_need_rotate(c)):
             chars_size.append(size)
             widths.append(size[0])
             heights.append(size[1])
@@ -110,16 +124,17 @@ def draw_text_on_bg_hv(
     else:
         height += sum(char_spacings[:-1])
 
-    # 长宽估算，生成掩码
-    # text_mask = transparent_img((width, height))
-    # x方向两头填充字符数
-    x_pad_chars_num = 4
-    text_mask = transparent_img((3 * width, x_pad_chars_num * width + height))  # 四周的padding 平均一个height。
-    pre_img = copy.deepcopy(text_mask)
+    # 四周按单字宽度留白，避免水平长文本的画布面积随整行宽度平方增长。
+    single_char_width = max(widths)
+    x_padding = single_char_width
+    y_padding = 2 * single_char_width
+    text_mask = transparent_img(
+        (width + 2 * x_padding, height + 2 * y_padding)
+    )
     draw = ImageDraw.Draw(text_mask)
 
-    x_start = c_x = width
-    y_start = c_y = (x_pad_chars_num // 2) * width
+    c_x = x_padding
+    c_y = y_padding
 
     horizontal_content = []
     if font_text.horizontal:
@@ -129,6 +144,7 @@ def draw_text_on_bg_hv(
 
             c_x += chars_size[i][0] + char_spacings[i]
     else:
+        pre_img = copy.deepcopy(text_mask)
         x_offset = font_text.offset[0]
         # 纵横书写，预留位置。实现中英文 书脊名字的排列形式。
         vertical_location = []
@@ -159,14 +175,6 @@ def draw_text_on_bg_hv(
             else:
                 pre_img = np.array(text_mask)
 
-    pre_img = np.array(text_mask)[..., :3]
-
-    points = np.argwhere(pre_img < 255)
-    xmin = np.min(points[:, 1])
-    ymin = np.min(points[:, 0])
-    xmax = np.max(points[:, 1])
-    ymax = np.max(points[:, 0])
-    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
     if save_dir:
         if not osp.exists(save_dir):
             os.mkdir(save_dir)
@@ -174,7 +182,7 @@ def draw_text_on_bg_hv(
         # 存储用于字体展示
         text_mask.save(osp.join(save_dir, osp.basename(font_text.font_path) + '.png'))
 
-    bbox = box_n.tolist()
+    bbox = _alpha_bbox_points(text_mask)
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base
@@ -695,15 +703,7 @@ def _draw_text_on_bg(
         anchor=None,
     )
 
-    pre_img = np.array(text_mask)[..., :3]
-    points = np.argwhere(pre_img < 255)
-    xmin = np.min(points[:, 1])
-    ymin = np.min(points[:, 0])
-    xmax = np.max(points[:, 1])
-    ymax = np.max(points[:, 0])
-    box_n = np.asarray([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
-
-    bbox = box_n.tolist()
+    bbox = _alpha_bbox_points(text_mask)
     font_base = osp.basename(font_text.font_path)
 
     return text_mask, bbox, font_base

@@ -1,11 +1,10 @@
 import inspect
-import os
 from pathlib import Path
 import imgaug.augmenters as iaa
 import sys
 # sys.path.append(r'E:\lxd\OCR_project\text_renderer_lv\example_data')
 print(sys.path)
-from example_data.effect_layout_example import vertical_text
+from configs.examples.effect_layout import vertical_text
 from text_renderer.effect import *
 from text_renderer.corpus import *
 from text_renderer.config import (
@@ -18,7 +17,7 @@ from text_renderer.layout.same_line import SameLineLayout
 from text_renderer.layout.extra_text_line import ExtraTextLineLayout
 
 
-CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__file__)))
+CURRENT_DIR = Path(__file__).resolve().parents[2] / "example_data"
 OUT_DIR = CURRENT_DIR / "output"
 DATA_DIR = CURRENT_DIR
 BG_DIR = DATA_DIR / "bg"
