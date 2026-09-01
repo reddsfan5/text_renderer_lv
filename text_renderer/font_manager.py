@@ -2,7 +2,7 @@ import os
 import random
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Set, Tuple, Dict
+from typing import Iterable, List, Set, Tuple, Dict
 
 import pandas as pd
 from PIL import ImageFont
@@ -11,6 +11,119 @@ from fontTools.ttLib import TTFont, TTCollection
 from loguru import logger
 
 from text_renderer.utils.utils import load_chars_file
+
+
+PLACEHOLDER_GLYPH_NAMES = {
+    ".notdef",
+    ".null",
+    "nonmarkingreturn",
+    "undefined",
+    "missing",
+    "missingglyph",
+}
+
+
+def validate_font_file(
+    font_path: Path,
+    required_chars: Iterable[str] = (),
+    min_coverage: float = 0.95,
+) -> Dict:
+    """Validate cmap-to-glyph mappings and language coverage for one font file.
+
+    A font is safe only when every Unicode cmap entry points to an existing,
+    non-placeholder glyph and the requested character set reaches
+    ``min_coverage``. TTC files are checked face by face because the renderer
+    currently uses the first face of a collection.
+    """
+    path = str(font_path)
+    required = set(required_chars)
+    if not 0 <= min_coverage <= 1:
+        raise ValueError("min_coverage must be between 0 and 1")
+
+    try:
+        if path.lower().endswith(".ttc"):
+            collection = TTCollection(path)
+            face_count = len(collection.fonts)
+            collection.close()
+        else:
+            face_count = 1
+    except Exception as error:
+        return {
+            "path": path,
+            "safe": False,
+            "error": f"cannot open font: {error}",
+            "faces": [],
+        }
+
+    faces = []
+    for face_index in range(face_count):
+        font = None
+        try:
+            font = TTFont(
+                path,
+                0,
+                allowVID=0,
+                ignoreDecompileErrors=True,
+                fontNumber=face_index,
+            )
+            glyph_order = font.getGlyphOrder()
+            glyph_names = set(glyph_order)
+            first_glyph = glyph_order[0] if glyph_order else None
+            cmap = {}
+            for table in font["cmap"].tables:
+                if table.isUnicode():
+                    cmap.update(table.cmap)
+
+            invalid_mappings = []
+            placeholder_codepoints = []
+            for codepoint, glyph_name in cmap.items():
+                if glyph_name not in glyph_names:
+                    invalid_mappings.append(codepoint)
+                elif (
+                    glyph_name in PLACEHOLDER_GLYPH_NAMES
+                    or glyph_name == first_glyph
+                ):
+                    placeholder_codepoints.append(codepoint)
+
+            missing = sorted(
+                char
+                for char in required
+                if ord(char) not in cmap
+                or cmap[ord(char)] not in glyph_names
+                or cmap[ord(char)] in PLACEHOLDER_GLYPH_NAMES
+                or cmap[ord(char)] == first_glyph
+            )
+            covered = len(required) - len(missing)
+            coverage = covered / len(required) if required else 1.0
+            safe = bool(cmap) and not invalid_mappings and not placeholder_codepoints
+            safe = safe and coverage >= min_coverage
+            faces.append(
+                {
+                    "index": face_index,
+                    "cmap_count": len(cmap),
+                    "invalid_mapping_count": len(invalid_mappings),
+                    "placeholder_count": len(placeholder_codepoints),
+                    "placeholder_codepoints": sorted(placeholder_codepoints),
+                    "required_count": len(required),
+                    "covered_count": covered,
+                    "coverage": coverage,
+                    "missing_characters": missing,
+                    "safe": safe,
+                }
+            )
+        except Exception as error:
+            faces.append(
+                {
+                    "index": face_index,
+                    "safe": False,
+                    "error": f"cannot parse face: {error}",
+                }
+            )
+        finally:
+            if font is not None:
+                font.close()
+
+    return {"path": path, "safe": bool(faces) and all(face["safe"] for face in faces), "faces": faces}
 
 
 def get_excel_font(excel_path: str):
