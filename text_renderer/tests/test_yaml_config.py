@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from text_renderer.cli import apply_cli_overrides, parse_args
+from text_renderer.cli import apply_cli_overrides, generate_samples, parse_args
 from text_renderer.config import (
     AppCfg,
     FixedPerspectiveTransformCfg,
@@ -98,6 +98,42 @@ def test_cli_values_override_loaded_config():
     assert len(corpus.texts) >= 3
     assert app_cfg.runtime.num_processes == 0
     assert app_cfg.storage.dataset == "lmdb"
+
+
+def test_cli_sample_count_is_non_negative():
+    assert parse_args(["--sample-count", "0"]).sample_count == 0
+    with pytest.raises(ValueError, match="sample-count"):
+        apply_cli_overrides(
+            AppCfg(generators=[]),
+            Namespace(
+                num_images=None,
+                num_processes=None,
+                log_period=None,
+                sample_count=-1,
+                dataset=None,
+                output_dir=None,
+            ),
+        )
+
+
+def test_generate_samples_calls_visualizer_for_each_lmdb_generator(monkeypatch, tmp_path):
+    calls = []
+
+    monkeypatch.setattr(
+        "text_renderer.cli._visualize_lmdb",
+        lambda path, count: calls.append((path, count)),
+    )
+    app_cfg = AppCfg(
+        generators=[
+            GeneratorCfg(1, tmp_path / "one", RenderCfg(corpus=[]), name="one"),
+            GeneratorCfg(1, tmp_path / "two", RenderCfg(corpus=[]), name="two"),
+        ]
+    )
+    app_cfg.storage.dataset = "lmdb"
+
+    generate_samples(app_cfg, sample_count=3)
+
+    assert calls == [(tmp_path / "one", 3), (tmp_path / "two", 3)]
 
 
 def test_v2_language_profile_keeps_corpus_font_and_text_together():

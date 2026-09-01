@@ -19,6 +19,8 @@ import argparse
 import multiprocessing as mp
 from pathlib import Path
 
+from loguru import logger
+
 from text_renderer.config import AppCfg, get_app_cfg
 from text_renderer.runner import run
 
@@ -43,6 +45,12 @@ def parse_args(arg_list: list = None):
     parser.add_argument("--num-images", type=int, default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--log-period", "--log_period", type=float, default=None)
+    parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=50,
+        help="Generate this many visual samples after LMDB generation; 0 disables it",
+    )
     return parser.parse_args(arg_list)
 
 
@@ -53,6 +61,9 @@ def apply_cli_overrides(app_cfg: AppCfg, args):
         raise ValueError("--num-processes must be >= 0")
     if args.log_period is not None and args.log_period <= 0:
         raise ValueError("--log-period must be > 0")
+    sample_count = getattr(args, "sample_count", None)
+    if sample_count is not None and sample_count < 0:
+        raise ValueError("--sample-count must be >= 0")
 
     if args.num_processes is not None:
         app_cfg.runtime.num_processes = args.num_processes
@@ -80,13 +91,43 @@ def apply_cli_overrides(app_cfg: AppCfg, args):
     return app_cfg
 
 
+def _visualize_lmdb(lmdb_path: Path, sample_count: int) -> None:
+    """Render representative LMDB records into ``<output>/samples``."""
+    from lv_tools.lmdbs.visualize import show_samples
+
+    show_samples(str(lmdb_path), count=sample_count)
+
+
+def generate_samples(app_cfg: AppCfg, sample_count: int = 50) -> None:
+    """Best-effort post-generation visualization for LMDB datasets."""
+    if sample_count <= 0 or app_cfg.storage.dataset != "lmdb":
+        return
+
+    for generator_cfg in app_cfg.generators:
+        try:
+            _visualize_lmdb(generator_cfg.save_dir, sample_count)
+            logger.info(
+                "Generated {} visualization samples in {}",
+                sample_count,
+                generator_cfg.save_dir / "samples",
+            )
+        except Exception:
+            logger.warning(
+                "Could not generate visualization samples for {}",
+                generator_cfg.save_dir,
+                exc_info=True,
+            )
+
+
 def main(arg_list: list = None):
     args = parse_args(arg_list)
     app_cfg = apply_cli_overrides(
         get_app_cfg(args.config, args.selected_languages), args
     )
     mp.set_start_method("spawn", force=True)
-    return run(app_cfg)
+    result = run(app_cfg)
+    generate_samples(app_cfg, args.sample_count)
+    return result
 
 
 if __name__ == "__main__":
