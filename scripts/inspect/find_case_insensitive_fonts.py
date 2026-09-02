@@ -1,4 +1,28 @@
-"""Find fonts whose uppercase and lowercase Latin letters are indistinguishable."""
+"""扫描大小写无法区分的字体。
+
+使用方式（请在 text_renderer_lv 项目根目录运行）：
+
+    # 只查询，不移动文件；默认至少 5 对大小写字形相同
+    python -m scripts.inspect.find_case_insensitive_fonts D:/fonts
+
+    # 自定义阈值。至少 3 对大小写字形相同就判定为问题字体
+    python -m scripts.inspect.find_case_insensitive_fonts D:/fonts --min-pairs 3
+
+    # 查询后将匹配字体移动到目标目录；目标中存在同名文件时会停止且不覆盖
+    python -m scripts.inspect.find_case_insensitive_fonts D:/fonts `
+        --min-pairs 3 --move-to D:/fonts_bug
+
+    # 扫描所有子目录，并输出 JSON 报告
+    python -m scripts.inspect.find_case_insensitive_fonts D:/fonts `
+        --recursive --json
+
+判定规则：
+    统计 ASCII 及拉丁扩展字符（例如 À/à、É/é）的大小写配对；
+    如果至少 ``min_pairs`` 对映射到同一 glyph，或 glyph 轮廓和宽度完全相同，
+    则将字体列为候选。默认只扫描当前目录下的字体文件，不包含 PNG 预览图。
+
+注意：``--move-to`` 是有副作用的操作，请先不带该参数确认查询结果。
+"""
 
 import argparse
 import json
@@ -126,7 +150,12 @@ def main() -> int:
     reconfigure = getattr(sys.stdout, "reconfigure", None)
     if reconfigure is not None:
         reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description=__doc__)
+    description, _, epilog = __doc__.partition("\n\n")
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("directory", type=Path, help="Directory containing font files")
     parser.add_argument("--min-pairs", type=int, default=5, help="Minimum indistinguishable pairs (default: 5)")
     parser.add_argument("--recursive", action="store_true", help="Scan subdirectories recursively")
