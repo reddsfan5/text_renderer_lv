@@ -12,3 +12,11 @@ python -m scripts.inspect.lmdb_char_statistics --help
 - `corpus/`：语料构建和补全。
 - `inspect/`：数据统计与可视化。
 - `experiments/`：调试和人工实验代码。
+# 查找大小写字母无法区分的字体
+
+默认阈值为 5 对大小写字母：
+
+```powershell
+python -m scripts.inspect.find_case_insensitive_fonts D:/fonts
+python -m scripts.inspect.find_case_insensitive_fonts D:/fonts --min-pairs 5 --move-to D:/fonts_bug
+```
