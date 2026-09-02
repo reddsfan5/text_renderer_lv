@@ -3,6 +3,8 @@
 import argparse
 import json
 import shutil
+import sys
+import unicodedata
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
@@ -32,6 +34,25 @@ def _face_count(path: Path) -> int:
         collection.close()
 
 
+def _latin_case_pairs(cmap: Dict[int, str]) -> List[Tuple[int, int, str]]:
+    """Return mapped uppercase/lowercase pairs from the Latin Unicode blocks."""
+    pairs = []
+    seen = set()
+    for codepoint in list(cmap):
+        char = chr(codepoint)
+        if not unicodedata.name(char, "").startswith("LATIN") or not char.isupper():
+            continue
+        lower = char.lower()
+        if len(lower) != 1 or lower == char or ord(lower) not in cmap:
+            continue
+        pair = (codepoint, ord(lower))
+        if pair in seen:
+            continue
+        seen.add(pair)
+        pairs.append((codepoint, ord(lower), char + lower))
+    return pairs
+
+
 def _face_pair_counts(path: Path, face_index: int) -> Tuple[int, int, int, List[str]]:
     font = TTFont(str(path), ignoreDecompileErrors=True, fontNumber=face_index)
     try:
@@ -42,19 +63,15 @@ def _face_pair_counts(path: Path, face_index: int) -> Tuple[int, int, int, List[
 
         pairs = same_glyph = same_outline = 0
         same_pairs = []
-        for offset in range(26):
-            upper = ord("A") + offset
-            lower = ord("a") + offset
-            if upper not in cmap or lower not in cmap:
-                continue
+        for upper, lower, label in _latin_case_pairs(cmap):
             pairs += 1
             upper_glyph, lower_glyph = cmap[upper], cmap[lower]
             if upper_glyph == lower_glyph:
                 same_glyph += 1
-                same_pairs.append(chr(upper) + chr(lower))
+                same_pairs.append(label)
             elif _outline(font, upper_glyph) == _outline(font, lower_glyph):
                 same_outline += 1
-                same_pairs.append(chr(upper) + chr(lower))
+                same_pairs.append(label)
         return pairs, same_glyph, same_outline, same_pairs
     finally:
         font.close()
@@ -105,6 +122,10 @@ def move_results(results: List[Dict], destination: Path) -> None:
 
 
 def main() -> int:
+    # Windows consoles may default to GBK, which cannot print every font name.
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path, help="Directory containing font files")
     parser.add_argument("--min-pairs", type=int, default=5, help="Minimum indistinguishable pairs (default: 5)")
