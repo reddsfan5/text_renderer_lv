@@ -16,6 +16,12 @@ from text_renderer.config.yaml_config import (
     _clean_line,
     _load_corpus_items,
     _load_v1_root,
+    _text_color_cfg,
+)
+from text_renderer.config.models import (
+    FixedTextColorCfg,
+    GrayStyleCfg,
+    SafeTextColorCfg,
 )
 from text_renderer.corpus.corpus import Corpus
 from text_renderer.runner import iter_task_batch_sizes
@@ -205,6 +211,33 @@ def test_output_override_uses_language_names_for_multiple_generators():
 
     assert app_cfg.generators[0].save_dir == Path("output/chinese")
     assert app_cfg.generators[1].save_dir == Path("output/korean")
+
+
+@pytest.mark.parametrize(
+    "strategy, expected_type",
+    [
+        ("fixed", FixedTextColorCfg),
+        ("adaptive", SafeTextColorCfg),
+        ("safe", SafeTextColorCfg),
+        ("gray", GrayStyleCfg),
+    ],
+)
+def test_text_color_strategy_builds_expected_cfg(strategy, expected_type):
+    cfg = _text_color_cfg(
+        {
+            "text_color_strategy": strategy,
+            "fixed_rgb": [12, 34, 56],
+            "text_alpha_range": [200, 220],
+        }
+    )
+    assert isinstance(cfg, expected_type)
+    assert (cfg.r, cfg.g, cfg.b) == (12, 34, 56)
+    assert cfg.alpha == (200, 220)
+
+
+def test_text_color_strategy_rejects_unknown_value():
+    with pytest.raises(ValueError, match="text_color_strategy"):
+        _text_color_cfg({"text_color_strategy": "rainbow"})
 
 
 def test_task_batches_cover_every_generation_attempt():

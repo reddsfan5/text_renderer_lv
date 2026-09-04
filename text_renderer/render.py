@@ -95,24 +95,27 @@ class Render:
             # raise e
 
 
+    def _resolve_text_color(
+        self, bg: PILImage, cmap: Literal["color", "gray"] = "color"
+    ) -> FontColor:
+        # corpus text_color_cfg has higher priority than RenderCfg.text_color_cfg
+        if getattr(self.corpus.cfg, "text_color_cfg", None) is not None:
+            return self.corpus.cfg.text_color_cfg.get_color(bg)
+        if self.cfg.text_color_cfg is not None:
+            return self.cfg.text_color_cfg.get_color(bg)
+        # Legacy fallback when no strategy cfg is configured.
+        if cmap == "gray":
+            gray_value = random.randint(*self.cfg.gray_text_range)
+            alpha = random.randint(*self.cfg.text_alpha_range)
+            return (gray_value, gray_value, gray_value, alpha)
+        return self.get_text_color(bg, "", None)
+
     def gen_single_corpus(self, with_pattern=False, write_mode: Literal['oneline', 'multiline'] = 'oneline',cmap:Literal['color','gray']='color') -> Tuple[PILImage, str, PILImage, PILImage,list,str]:
         font_text = self.corpus.sample()
 
 
         bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
-
-        if cmap == 'color':
-            if self.cfg.text_color_cfg is not None:
-                text_color = self.cfg.text_color_cfg.get_color(bg)
-
-            # corpus text_color has higher priority than RenderCfg.text_color_cfg
-            if self.corpus.cfg.text_color_cfg is not None:
-                text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
-
-        else:
-            gray_value = random.randint(*self.cfg.gray_text_range)
-            alpha = random.randint(*self.cfg.text_alpha_range)
-            text_color = (gray_value, gray_value, gray_value, alpha)
+        text_color = self._resolve_text_color(bg, cmap=cmap)
 
 
 
@@ -338,31 +341,7 @@ class RenderOne(Render):
         font_text = self.corpus.get_font_text(text)
 
         bg = self.bg_manager.get_bg()  # 从bg图库中生成文字背景
-
-
-        if cmap == 'color':
-            if self.cfg.text_color_cfg is not None:
-                text_color = self.cfg.text_color_cfg.get_color(bg)
-
-            # corpus text_color has higher priority than RenderCfg.text_color_cfg
-            if self.corpus.cfg.text_color_cfg is not None:
-                text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
-        else:
-            gray_value = random.randint(*self.cfg.gray_text_range)
-            alpha = random.randint(*self.cfg.text_alpha_range)
-            text_color = (gray_value, gray_value, gray_value, alpha)
-
-
-
-
-
-
-        # if self.cfg.text_color_cfg is not None:
-        #     text_color = self.cfg.text_color_cfg.get_color(bg)
-        #
-        # # corpus text_color has higher priority than RenderCfg.text_color_cfg
-        # if self.corpus.cfg.text_color_cfg is not None:
-        #     text_color = self.corpus.cfg.text_color_cfg.get_color(bg)
+        text_color = self._resolve_text_color(bg, cmap=cmap)
 
         # 书写文本接口,写在透明背景上
         if write_mode == 'oneline':

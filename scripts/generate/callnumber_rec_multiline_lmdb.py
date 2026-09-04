@@ -19,7 +19,7 @@ Note: third-line ``v`` and ``.v`` prefixes are rendered verbatim and are also
 included verbatim in the transcription label.
 
 Usage:
-    python -m scripts.generate.callnumber_rec_multiline_lmdb --out ./call_number_rec_multiline_lmdb --num 10000 --output-scale 0.5
+    python -m scripts.generate.callnumber_rec_multiline_lmdb --out F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/multi_language_090116_34_25/call_number_rec_multiline_lmdb --num 1000 --output-scale 0.8
     python -m scripts.generate.callnumber_rec_multiline_lmdb --patterns '[{"lengths":[2,2,2],"weight":1},{"lengths":[2,2,0],"weight":2},{"lengths":[0,0,3],"weight":1}]'
     python -m scripts.generate.callnumber_rec_multiline_lmdb --generator-strategy learned --num 10000
 """
@@ -58,10 +58,10 @@ _DEFAULT_PATTERNS = [
     {"lengths": [2, 2, 2], "weight": 1.5},
     {"lengths": [3, 3, 3], "weight": 1.5},
     {"lengths": [2, 1, 1], "weight": 1},
-    {"lengths": [4, 4, 0], "weight": 1},
-    {"lengths": [5, 5, 0], "weight": 1},
-    {"lengths": [6, 6, 0], "weight": 1},
-    {"lengths": [7, 7, 0], "weight": 1},
+    # {"lengths": [4, 4, 0], "weight": 1},
+    # {"lengths": [5, 5, 0], "weight": 1},
+    # {"lengths": [6, 6, 0], "weight": 1},
+    # {"lengths": [7, 7, 0], "weight": 1},
 
     {"lengths": [2, 1, 0], "weight": 2.5},
     {"lengths": [2, 0, 2], "weight": 2.5},

@@ -173,15 +173,18 @@ def _load_corpus_items(data: Mapping[str, Any], num_images: int) -> List[str]:
 
 
 def _text_color_cfg(data: Mapping[str, Any]):
-    strategy = str(data.get("text_color_strategy", "safe")).lower()
-    if strategy == "safe":
+    # fixed: use fixed_rgb; adaptive/safe: contrast against background mean.
+    strategy = str(data.get("text_color_strategy", "adaptive")).lower()
+    if strategy in {"adaptive", "safe"}:
         cfg = SafeTextColorCfg()
     elif strategy == "fixed":
         cfg = FixedTextColorCfg()
     elif strategy == "gray":
         cfg = GrayStyleCfg()
     else:
-        raise ValueError("render.text_color_strategy must be safe, fixed, or gray")
+        raise ValueError(
+            "render.text_color_strategy must be fixed, adaptive (alias: safe), or gray"
+        )
 
     rgb = data.get("fixed_rgb", [0, 0, 0])
     if not isinstance(rgb, (list, tuple)) or len(rgb) != 3:

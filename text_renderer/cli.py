@@ -92,10 +92,10 @@ def apply_cli_overrides(app_cfg: AppCfg, args):
 
 
 def _visualize_lmdb(lmdb_path: Path, sample_count: int) -> None:
-    """Render representative LMDB records into ``<output>/samples``."""
-    from lv_tools.lmdbs.visualize import show_samples
+    """Export original crops + label map, and render annotated previews."""
+    from lmdbs.lmdbs.visualize import visualize_full
 
-    show_samples(str(lmdb_path), count=sample_count)
+    visualize_full(str(lmdb_path), num=sample_count)
 
 
 def generate_samples(app_cfg: AppCfg, sample_count: int = 50) -> None:

@@ -1,3 +1,16 @@
+"""LMDB 可视化入口：复用 lv_tools，并补齐本仓库的 num-samples 修复。
+
+用法
+----
+  # 一键：导出原图+标注 map.txt，并渲染带标注预览图（最常用）
+  python -m lmdbs.lmdbs.visualize full --lmdb F:\dataset\OCR\3.text_rec\synthesis\rec_pieces\test --num 20
+
+  # 仅渲染预览图到 <lmdb>/samples
+  python -m lmdbs.lmdbs.visualize samples --lmdb F:/path/to/lmdb --num 30
+
+  # 仅导出原图与 map.txt 到 <lmdb>/ori_data
+  python -m lmdbs.lmdbs.visualize ori-data --lmdb F:/path/to/lmdb --num 20
+"""
 
 from pathlib import Path
 
@@ -26,7 +39,7 @@ def ensure_num_samples(lmdb_path):
             with txn.cursor() as cursor:
                 for key, _ in cursor:
                     for prefix in sample_key_counts:
-                        if key.startswith(prefix) and key[len(prefix):].isdigit():
+                        if key.startswith(prefix) and key[len(prefix) :].isdigit():
                             sample_key_counts[prefix] += 1
                             break
 
@@ -46,16 +59,51 @@ def visualization_some_sample(lmdb_path, num=100, lan="ch"):
     ensure_num_samples(lmdb_path)
     return show_samples(lmdb_path, count=num)
 
-if __name__ == '__main__':
-    visualization_some_sample(
-        r'F:\dataset\OCR\3.text_rec\synthesis\rec_pieces\lmdb_yaml_090110_38_36\callnumber')
-    # cvt_data()
-    # lmdb_info(r'\\192.168.1.11\dataset\bar_code\a_bar\a_det\synthesis\bar_spine_1226_6num_remainder_v4lmdb')
-    # li = [str(i).zfill(6) for i in range(10**6)]
-    # print(li[:10])
-    # lmdb_path = r'F:\dataset\OCR\2.text_det\syn_digit_series_with_parenthesis_lmdb_num_5000'
-    # with lmdb.open(lmdb_path) as env:
-    #     with env.begin(write=False) as txn:
-    #         for k,v in txn.cursor():
-    #             if not k.decode('utf8').startswith('id-'):
-    #                 print(f"{k.decode('utf8')}---{v.decode('unicode_escape')}")
+
+def visualize_full(lmdb_path, num=20):
+    """导出原图+标注，并渲染预览图（对应 lv_tools ``full``）。"""
+    ensure_num_samples(lmdb_path)
+    get_ori_data(lmdb_path, num)
+    show_samples(lmdb_path, num)
+
+
+def main(argv=None):
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    full_p = sub.add_parser("full", help="导出原图+标注，并渲染预览图")
+    full_p.add_argument("--lmdb", required=True, help="LMDB 目录路径")
+    full_p.add_argument("--num", type=int, default=20, help="采样数量（默认 20）")
+
+    samples_p = sub.add_parser("samples", help="仅渲染预览图到 <lmdb>/samples")
+    samples_p.add_argument("--lmdb", required=True, help="LMDB 目录路径")
+    samples_p.add_argument("--num", type=int, default=50, help="展示数量（默认 50）")
+
+    ori_p = sub.add_parser("ori-data", help="导出原图与 map.txt 到 <lmdb>/ori_data")
+    ori_p.add_argument("--lmdb", required=True, help="LMDB 目录路径")
+    ori_p.add_argument("--num", type=int, default=20, help="抽取数量（默认 20）")
+
+    show_p = sub.add_parser("show", help="查看单条记录原文")
+    show_p.add_argument("--lmdb", required=True, help="LMDB 目录路径")
+    show_p.add_argument("--id", type=int, default=0, help="记录 id")
+
+    args = parser.parse_args(argv)
+    ensure_num_samples(args.lmdb)
+
+    if args.command == "full":
+        visualize_full(args.lmdb, args.num)
+    elif args.command == "samples":
+        show_samples(args.lmdb, args.num)
+    elif args.command == "ori-data":
+        get_ori_data(args.lmdb, args.num)
+    elif args.command == "show":
+        show_single(args.lmdb, args.id)
+
+
+if __name__ == "__main__":
+    main()

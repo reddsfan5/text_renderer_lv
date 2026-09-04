@@ -2,7 +2,7 @@ version: 2
 
 # 公共运行参数。命令行参数优先于这里的值。
 runtime:
-  num_processes: 6
+  num_processes: 3
   log_period: 2
   # 有界队列避免大量高分辨率图片同时驻留内存。
   queue_size: 64
@@ -18,9 +18,9 @@ storage:
 
 generator:
   # 可同时启用多个语言，也可用 --language 临时覆盖。
-  active_languages: [callnumber]
-  num_images: 300000
-  output_dir: "F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/lmdb_yaml_{timestamp}/{language}"
+  active_languages: [russian] # [callnumber, chinese, korean, japanese, french, spanish, russian, german, tibetan]
+  num_images: 1000
+  output_dir: "F:/dataset/OCR/3.text_rec/synthesis/rec_pieces/syn_ocr_{timestamp}/{language}"
 
 # 背景和渲染参数默认由所有语言共享；语言档案内可按需覆盖。
 background:
@@ -29,9 +29,14 @@ background:
 
 render:
   write_mode: oneline
-  text_color_mode: gray
-  text_color_strategy: safe
+  # 文字颜色方案（二选一）：
+  #   fixed     - 指定颜色，使用下方 fixed_rgb
+  #   adaptive  - 基于背景均值自适应（safe 为同义别名）
+  #   gray      - 随机深灰（兼容旧配置）
+  text_color_strategy: adaptive
   fixed_rgb: [0, 0, 0]
+  # 仅在无 text_color_strategy 对应配置、走遗留回退时生效
+  text_color_mode: color
   gray_text_range: [0, 12]
   text_alpha_range: [245, 255]
   return_bg_and_mask: false
@@ -56,7 +61,7 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 20
       long_text: split
       capacity_multiplier: 1.2
     font:
@@ -65,7 +70,7 @@ languages:
     text:
       orientation: vertical
       rotate_characters: true
-      clip_length: 12
+      clip_length: 20
       char_spacing: 0
       join_str: ""
 
@@ -83,7 +88,7 @@ languages:
       capacity_multiplier: 1.2
     font:
       dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/简体-简体-低风险/常规类_已更正/等宽"
-      size: [30, 36]
+      size: [36, 38]
     text:
       orientation: horizontal
       rotate_characters: false
@@ -91,30 +96,6 @@ languages:
       clip_length: 30
       char_spacing: 0
       join_str: ""
-
-
-
-  # korean_catalog:
-  #   corpus:
-  #     path: "F:/dataset/OCR/图书目录/text/korea/Kor_book_name_author_publisher-280w.txt"
-  #     charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
-  #     strip: true
-  #     normalize_spaces: true
-  #     remove_punctuation: true
-  #     allowed_punctuation: "！？"
-  #     min_length: 2
-  #     max_length: 12
-  #     long_text: split
-  #     capacity_multiplier: 1.2
-  #   font:
-  #     dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/韩文"
-  #     size: [30, 36]
-  #   text:
-  #     orientation: vertical
-  #     rotate_characters: true
-  #     clip_length: 12
-  #     char_spacing: 0
-  #     join_str: ""
 
   chinese:
     corpus:
@@ -125,7 +106,7 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 20
       long_text: split
       capacity_multiplier: 1.2
     font:
@@ -137,19 +118,13 @@ languages:
         mini:
           dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/font_mini"
           size: [30, 36]
-        artistic:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/超个性-存在简体繁体混合使用/超个性-已更新"
-          size: [30, 36]
-        single:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/简体-简体-低风险/单一字体/1"
-          size: [20, 21]
         normal:
           dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/简体-简体-低风险/常规类_已更正"
           size: [30, 36]
     text:
       orientation: vertical
       rotate_characters: true
-      clip_length: 12
+      clip_length: 20
       char_spacing: 0
       join_str: ""
 
@@ -162,40 +137,19 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 20
       long_text: split
       capacity_multiplier: 1.2
     font:
-      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/日文/ttf-notdef/smaller"
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/日文/ttf_checked"
       size: [30, 36]
     text:
       orientation: vertical
       rotate_characters: true
-      clip_length: 12
+      clip_length: 20
       char_spacing: 0
       join_str: ""
 
-  japanese_callnumber:
-    corpus:
-      path: "F:/dataset/OCR/图书目录/text/japan/jp_shenzhen.txt"
-      charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
-      strip: true
-      normalize_spaces: true
-      remove_punctuation: true
-      allowed_punctuation: "！？"
-      min_length: 2
-      max_length: 12
-      long_text: split
-      capacity_multiplier: 1.2
-    font:
-      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/日文/ttf-notdef/smaller"
-      size: [30, 36]
-    text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
-      char_spacing: 0
-      join_str: ""
 
   french:
     corpus:
@@ -206,25 +160,19 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 50
       long_text: split
       capacity_multiplier: 1.2
     font:
       active: library
       variants:
         library:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/jinke_miaomu_done/en_fr_jinke_miaomu_done"
-          size: [30, 36]
-        multilingual:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/jinke_miaomu_done/en_fr_jinke_miaomu_done/eng_fre_spa"
-          size: [30, 36]
-        handwriting:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/手写体"
-          size: [30, 36]
+          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/en_latin/eng_fre_spa_ger"
+          size: [36, 38]
     text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
+      orientation: horizontal
+      rotate_characters: false
+      clip_length: 50
       char_spacing: 0
       join_str: ""
 
@@ -237,22 +185,19 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 50
       long_text: split
       capacity_multiplier: 1.2
     font:
       active: multilingual
       variants:
         multilingual:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/jinke_miaomu_done/en_fr_jinke_miaomu_done/eng_fre_spa"
-          size: [30, 36]
-        handwriting:
-          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/手写体"
-          size: [30, 36]
+          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/en_latin/eng_fre_spa_ger"
+          size: [36, 38]
     text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
+      orientation: horizontal
+      rotate_characters: false
+      clip_length: 50
       char_spacing: 0
       join_str: ""
 
@@ -265,17 +210,17 @@ languages:
       normalize_spaces: true
       remove_punctuation: true
       allowed_punctuation: "！？"
-      min_length: 2
-      max_length: 12
+      min_length: 3
+      max_length: 50
       long_text: split
       capacity_multiplier: 1.2
     font:
       dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/俄文/70-potryasayushhix-kirillicheskix-russkix-shriftov/selected"
-      size: [30, 36]
+      size: [36, 38]
     text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
+      orientation: horizontal
+      rotate_characters: false
+      clip_length: 50
       char_spacing: 0
       join_str: ""
 
@@ -288,38 +233,44 @@ languages:
       remove_punctuation: true
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 50
       long_text: split
       capacity_multiplier: 1.2
     font:
-      # 旧 Python 路径少了一层 eng_fre_spa；这里使用实际存在的目录。
-      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/jinke_miaomu_done/en_fr_jinke_miaomu_done/eng_fre_spa/eng_fre_spa_ger"
-      size: [30, 36]
+      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/english/en_latin/eng_fre_spa_ger"
+      size: [36, 38]
     text:
-      orientation: vertical
-      rotate_characters: true
-      clip_length: 12
+      orientation: horizontal
+      rotate_characters: false
+      clip_length: 50
       char_spacing: 0
       join_str: ""
 
   tibetan:
     corpus:
-      path: "F:/dataset/OCR/图书目录/text/tibetan/n-bo_normed_mini.txt"
+      path: "F:/dataset/OCR/图书目录/text/tibetan/n-bo_normed_200w.txt"
       charset_path: "D:/lxd_code/OCR/OCR_SOURCE/charset/chn_kor_jap_fre_rus_spa_ara_latin_tib_24188.txt"
       strip: true
       normalize_spaces: true
       remove_punctuation: false
       allowed_punctuation: "！？"
       min_length: 2
-      max_length: 12
+      max_length: 50
       long_text: split
       capacity_multiplier: 1.2
+
     font:
-      dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/藏文"
-      size: [30, 36]
+      active: with_head
+      variants:
+        with_head:
+          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/藏文/有头字"
+          size: [36, 38]
+        no_head:
+          dir: "D:/lxd_code/OCR/OCR_SOURCE/font/font_set/藏文/无头字"
+          size: [36, 38]
     text:
       orientation: horizontal
       rotate_characters: false
-      clip_length: 12
+      clip_length: 50
       char_spacing: 0
       join_str: ""

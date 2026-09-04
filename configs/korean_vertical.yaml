@@ -45,9 +45,10 @@ background:
 
 render:
   write_mode: oneline
-  text_color_mode: gray
-  text_color_strategy: safe
+  # Text color: fixed (use fixed_rgb) | adaptive (bg-aware; alias: safe) | gray
+  text_color_strategy: adaptive
   fixed_rgb: [0, 0, 0]
+  text_color_mode: color
   gray_text_range: [0, 12]
   text_alpha_range: [245, 255]
   return_bg_and_mask: false
