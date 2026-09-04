@@ -1,12 +1,20 @@
-Text Renderer
+Text Renderer LV
 =========================================
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 使用文档
+
+   文档索引 <README.md>
+   commands
+   configuration
+   call_number_rec_multiline_lmdb
+   UPDATES
 
 .. toctree::
    :maxdepth: 1
    :caption: Notes
 
-   Readme <README.md>
-   call_number_rec_multiline_lmdb
    config
    note/render_pipeline
 

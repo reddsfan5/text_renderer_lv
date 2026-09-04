@@ -1,6 +1,6 @@
 ## 文本合成入口
 
-E:\lxd\text_renderer_lv\main.py
+text-renderer single-line --config configs/multilingual.yaml
 
 还需要做的事：
 * bg还有点少，需要添加。（还可以背景拼接，模拟多色背景）
@@ -75,5 +75,5 @@ E:\lxd\text_renderer_lv\main.py
 不支持的字体，系统会重新计数，但是列表总数一定，每次都会pop一个，最后计数没到，但列表已空，导致卡呆呆的。
 
 ## 不合格字体删除
-1.main.py 运行时，不支持的字体会在E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport.txt文件里生成。
+1.`text-renderer single-line` 运行时，不支持的字体会在E:\lxd\OCR_project\OCR_SOURCE\font/font_not_suport.txt文件里生成。
 2.运行，costum_utils.font_check_and_remove.py 删除对应字体。

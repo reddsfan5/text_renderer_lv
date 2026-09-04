@@ -10,6 +10,26 @@ from dataclasses import dataclass
 from numbers import Real
 
 
+# Characters that must not end a call-number line (open / unfinished marks).
+_OPEN_LINE_ENDING_CHARS = frozenset(".-:=(/")
+
+
+def ends_with_open_symbol(text: str) -> bool:
+    """Return True if text ends with an unfinished punctuation mark."""
+    return bool(text) and text[-1] in _OPEN_LINE_ENDING_CHARS
+
+
+def forbid_open_line_ending(text: str, rng=None) -> str:
+    """Replace any trailing open-ended symbols with digits."""
+    if not text or not ends_with_open_symbol(text):
+        return text
+    rng = rng or random.Random()
+    chars = list(text)
+    while chars and chars[-1] in _OPEN_LINE_ENDING_CHARS:
+        chars[-1] = rng.choice(string.digits)
+    return "".join(chars)
+
+
 @dataclass(frozen=True)
 class PatternConfig:
     """One call-number layout pattern and its sampling weight."""
@@ -276,7 +296,8 @@ _BUILTIN_LINE1_TEMPLATES = {
     2: Counter({"LD": 1}),
     3: Counter({"LDD": 1}),
     4: Counter({"LDDD": 1}),
-    5: Counter({"LD-DD": 3, "LLDDD": 1, "LDDD.": 1}),
+    # Trailing "." is forbidden (open-ended symbol); keep decimals mid-string only.
+    5: Counter({"LD-DD": 3, "LLDDD": 1, "LD.DD": 1}),
     6: Counter({"LDDD.D": 4, "LDDDDD": 1}),
     7: Counter({"LDDD.DD": 7, "LDDDDDD": 1}),
     8: Counter({"LDDD.DDD": 8, "LDDDDDDD": 1}),
@@ -406,11 +427,12 @@ class BuiltInDistributionCallNumberGenerator(CallNumberGenerator):
         )
         body_length = length - prefix_length
         body = [self._rng.choice(string.digits) for _ in range(body_length)]
+        # Keep "." mid-body only; never first or last char of the numeric body.
         if (
-            body_length >= 2
+            body_length >= 3
             and self._rng.random() < self._line1_decimal_probability
         ):
-            body[self._rng.randint(1, body_length - 1)] = "."
+            body[self._rng.randint(1, body_length - 2)] = "."
         return prefix + "".join(body)
 
     def _generate_second_line(self, length):
@@ -435,10 +457,12 @@ class BuiltInDistributionCallNumberGenerator(CallNumberGenerator):
 
     def _generate_line(self, line_index, length):
         if line_index == 0:
-            return self._generate_first_line(length)
-        if line_index == 1:
-            return self._generate_second_line(length)
-        return self._generate_third_line(length)
+            line = self._generate_first_line(length)
+        elif line_index == 1:
+            line = self._generate_second_line(length)
+        else:
+            line = self._generate_third_line(length)
+        return forbid_open_line_ending(line, self._rng)
 
     def _sample_lengths(self):
         line_count = self._weighted_choice(self._line_count_counter)

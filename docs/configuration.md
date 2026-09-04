@@ -1,6 +1,6 @@
 # YAML 配置说明
 
-主入口 `main.py` 支持 YAML 配置和原有 Python 配置。推荐使用
+正式入口 `text-renderer single-line` 支持 YAML 配置和 Python 配置。推荐使用
 `configs/multilingual.yaml`：它把公共生成参数放在顶层，把相互耦合的
 语料、字符集、字体和文字排版放进同一个语言档案。
 
@@ -135,19 +135,19 @@ runtime:
 使用 YAML 中 `active_languages` 指定的语言：
 
 ```powershell
-python main.py --config configs/multilingual.yaml
+python -m text_renderer.cli single-line --config configs/multilingual.yaml
 ```
 
 临时只生成藏文：
 
 ```powershell
-python main.py --config configs/multilingual.yaml --language tibetan
+python -m text_renderer.cli single-line --config configs/multilingual.yaml --language tibetan
 ```
 
 一次生成中文和韩文；`--language` 可重复使用：
 
 ```powershell
-python main.py `
+python -m text_renderer.cli single-line `
   --config configs/multilingual.yaml `
   --language chinese `
   --language korean
@@ -156,7 +156,7 @@ python main.py `
 覆盖少量核心参数：
 
 ```powershell
-python main.py `
+python -m text_renderer.cli single-line `
   --config configs/multilingual.yaml `
   --language korean `
   --num-images 20 `
@@ -170,7 +170,7 @@ python main.py `
 原来的 Python 配置仍可使用：
 
 ```powershell
-python main.py --config configs/examples/effect_layout.py --dataset lmdb
+python -m text_renderer.cli single-line --config configs/examples/effect_layout.py --dataset lmdb
 ```
 
 旧版单语言 YAML（`version: 1`）也继续兼容，例如
@@ -188,7 +188,6 @@ python main.py --config configs/examples/effect_layout.py --dataset lmdb
 | `--num-processes` | 覆盖生成进程数；`0` 为单进程 |
 | `--log-period` | 覆盖进度日志间隔百分比 |
 
-下划线形式的旧参数 `--num_processes`、`--log_period` 继续兼容。
 
 ## 语料与渲染参数
 

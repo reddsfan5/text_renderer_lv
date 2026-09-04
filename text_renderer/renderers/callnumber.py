@@ -8,19 +8,17 @@ Output for each sample:
 The annotation label is:
     "call_number_label"
 
-Usage:
-    python -m scripts.generate.callnumber_det --out ./call_number_labelme --num 1000 --width 1600 --height 640
 """
 
 from pathlib import Path
 
 import cv2
+import math
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
-import argparse, base64, json, random, re, shutil
+import base64, json, random, re
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 # ---- Call-number line pools (loaded from Excel in main) ----
 _CN_POOL_L1 = []            # line1: filtered len ≤ 3, punctuation stripped
 _CN_L2_BY_LEN = {}          # line2: {length: [items]}, punctuation stripped
@@ -43,7 +41,7 @@ _FONT_PATHS = sorted(FONT_DIR.glob("*.ttf")) if FONT_DIR.exists() else []
 _CURRENT_FONT_PATH = None   # one font per image
 _FONT_CACHE = {}            # {(path, size): ImageFont}, preloaded on switch
 _REFERENCE_IMAGE_HEIGHT = 640               # reference image height for scaling
-_IMAGE_SCALE_FACTOR = 1.0                # H / _BASE_H, set in main()
+_IMAGE_SCALE_FACTOR = 1.0                # H / _BASE_H, set by the pipeline
 
 DEFAULT_XLSX = r"D:\lxd_code\OCR\OCR_SOURCE\corpus\call_number\2026-06-26-13-32-44.xlsx"
 
@@ -245,6 +243,119 @@ def draw_fitted_multiline_text(
 
     return line_bboxes
 
+
+def _measure_horizontal_text(text, font):
+    """Return (width, height) of horizontal text via FreeType bbox."""
+    _, _, right, bottom = _get_line_bbox(text, font)
+    return max(1, int(math.ceil(right))), max(1, int(math.ceil(bottom)))
+
+
+def _render_column_strip(text, font, fill):
+    """Render one unit as horizontal text, then rotate 90° counterclockwise.
+
+    Sideways glyphs read top-to-bottom after CCW rotation of the horizontal strip.
+    """
+    text_w, text_h = _measure_horizontal_text(text, font)
+    pad = 1
+    strip = Image.new("RGBA", (text_w + 2 * pad, text_h + 2 * pad), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(strip, "RGBA")
+    draw.text((pad, pad), text, font=font, fill=fill, anchor="lt")
+    return strip.rotate(90, expand=True, resample=Image.BICUBIC)
+
+
+def fit_font_for_columns(columns, max_w, max_h, min_size=None, max_size=None):
+    """Fit a font so rotated column strips fit inside max_w x max_h."""
+    if min_size is None:
+        min_size = _scale_pixels(13)
+    if max_size is None:
+        max_size = _scale_pixels(17) + random.randint(-1, 1)
+    for fs in range(max_size, min_size - 1, -1):
+        font = get_font(fs)
+        col_gap = max(_scale_pixels(1), int(fs * random.uniform(0.35, 0.45)))
+        col_widths = []
+        col_heights = []
+        ok = True
+        for column in columns:
+            if not column:
+                continue
+            # After 90° CCW: horizontal (w, h) becomes column (h, w).
+            text_w, text_h = _measure_horizontal_text(column, font)
+            width, height = text_h, text_w
+            if width > max_w or height > max_h:
+                ok = False
+                break
+            col_widths.append(width)
+            col_heights.append(height)
+        if not ok or not col_widths:
+            continue
+        total_w = sum(col_widths) + col_gap * max(0, len(col_widths) - 1)
+        total_h = max(col_heights)
+        if total_w <= max_w and total_h <= max_h:
+            return font, col_gap
+    return (
+        get_font(min_size),
+        max(_scale_pixels(1), int(min_size * 0.2)),
+    )
+
+
+def draw_fitted_multicolumn_text(
+    img_rgba,
+    box,
+    lines,
+    fill=(12, 12, 12, 235),
+):
+    """Draw each line as a 90°-rotated column strip, left to right.
+
+    Each ``line`` is rendered horizontally then rotated 90° counterclockwise so
+    glyphs appear sideways and form a vertical column.
+
+    Returns:
+        list of [[x1,y1],[x2,y2],[x3,y3],[x4,y4]], one 4-point bbox per column
+    """
+    x1, y1, x2, y2 = box
+    pad_x = max(_scale_pixels(2), int((x2 - x1) * 0.08))
+    pad_y = max(_scale_pixels(2), int((y2 - y1) * 0.07))
+    inner_x1 = x1 + pad_x
+    inner_y1 = y1 + pad_y
+    inner_x2 = x2 - pad_x
+    inner_y2 = y2 - pad_y
+    inner_w = inner_x2 - inner_x1
+    inner_h = inner_y2 - inner_y1
+
+    max_w = max(_scale_pixels(6), int(0.90 * inner_w))
+    max_h = max(_scale_pixels(6), int(0.90 * inner_h))
+
+    columns = [line for line in lines if line]
+    if not columns:
+        return []
+
+    font, col_gap = fit_font_for_columns(columns, max_w, max_h)
+
+    strips = [_render_column_strip(column, font, fill) for column in columns]
+    block_w = sum(strip.size[0] for strip in strips) + col_gap * max(0, len(strips) - 1)
+    block_h = max(strip.size[1] for strip in strips)
+    cur_x = inner_x1 + (inner_w - block_w) / 2.0
+    block_top = inner_y1 + (inner_h - block_h) / 2.0
+
+    column_bboxes = []
+    for strip in strips:
+        sw, sh = strip.size
+        paste_y = int(round(block_top + (block_h - sh) / 2.0))
+        paste_x = int(round(cur_x))
+        img_rgba.paste(strip, (paste_x, paste_y), strip)
+        column_bboxes.append(
+            [
+                [paste_x, paste_y],
+                [paste_x + sw, paste_y],
+                [paste_x + sw, paste_y + sh],
+                [paste_x, paste_y + sh],
+            ]
+        )
+        cur_x += sw + col_gap
+
+    return column_bboxes
+
+
 def draw_vertical_title(draw, x, top, bottom, w, color):
     title = random.choice(TITLE_POOL)
     if random.random() < 0.5:
@@ -405,38 +516,3 @@ def generate_one(out_dir, idx, W=1600, H=640, include_imageData=False):
     json_path.write_text(json.dumps(ann, ensure_ascii=False, indent=2), encoding="utf-8")
     return len(shapes)
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="./call_number_det_equal_width_1w")
-    ap.add_argument("--num", type=int, default=100)
-    ap.add_argument("--width", type=int, default=4000)
-    ap.add_argument("--height", type=int, default=2000)
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--xlsx", default=DEFAULT_XLSX, help="Path to call-number Excel file")
-    ap.add_argument("--include-image-data", action="store_true", help="embed base64 imageData into LabelMe json")
-    args = ap.parse_args()
-
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-
-    load_callnumber_pools(args.xlsx)
-
-    global _IMAGE_SCALE_FACTOR
-    _IMAGE_SCALE_FACTOR = args.height / _REFERENCE_IMAGE_HEIGHT
-    print(f"Scale factor: {_IMAGE_SCALE_FACTOR:.2f} (H={args.height}/BASE={_REFERENCE_IMAGE_HEIGHT})")
-
-    out = Path(args.out)
-    if out.exists():
-        shutil.rmtree(out)
-    out.mkdir(parents=True, exist_ok=True)
-
-    counts = []
-    for i in tqdm(range(args.num)):
-        counts.append(generate_one(out, i, W=args.width, H=args.height, include_imageData=args.include_image_data))
-
-    print(f"Done: {out}")
-    print(f"images: {args.num}")
-    print(f"avg labels/image: {sum(counts) / max(1, len(counts)):.2f}")
-
-if __name__ == "__main__":
-    main()

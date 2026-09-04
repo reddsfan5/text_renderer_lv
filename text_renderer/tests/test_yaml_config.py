@@ -3,12 +3,17 @@ from pathlib import Path
 
 import pytest
 
-from text_renderer.cli import apply_cli_overrides, generate_samples, parse_args
+from text_renderer import cli
 from text_renderer.config import (
     AppCfg,
     FixedPerspectiveTransformCfg,
     GeneratorCfg,
     RenderCfg,
+)
+from text_renderer.pipelines.single_line import (
+    apply_cli_overrides,
+    generate_samples,
+    parse_args,
 )
 from text_renderer.config.yaml_config import (
     _apply_length_policy,
@@ -126,7 +131,7 @@ def test_generate_samples_calls_visualizer_for_each_lmdb_generator(monkeypatch, 
     calls = []
 
     monkeypatch.setattr(
-        "text_renderer.cli._visualize_lmdb",
+        "text_renderer.pipelines.single_line._visualize_lmdb",
         lambda path, count: calls.append((path, count)),
     )
     app_cfg = AppCfg(
@@ -140,6 +145,21 @@ def test_generate_samples_calls_visualizer_for_each_lmdb_generator(monkeypatch, 
     generate_samples(app_cfg, sample_count=3)
 
     assert calls == [(tmp_path / "one", 3), (tmp_path / "two", 3)]
+
+
+@pytest.mark.parametrize("command", tuple(cli.COMMANDS))
+def test_cli_dispatches_pipeline_without_consuming_its_args(monkeypatch, command):
+    calls = []
+    monkeypatch.setitem(
+        cli.COMMANDS,
+        command,
+        (lambda args: calls.append(args) or "result", "test command"),
+    )
+
+    result = cli.main([command, "--num", "3", "--sample-count", "1"])
+
+    assert result == "result"
+    assert calls == [["--num", "3", "--sample-count", "1"]]
 
 
 def test_v2_language_profile_keeps_corpus_font_and_text_together():

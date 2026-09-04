@@ -12,26 +12,37 @@ Generate text line images for training deep learning OCR model (e.g. [CRNN](http
 
 [Documentation](https://oh-my-ocr.github.io/text_renderer/index.html)
 
+See [data generation commands](docs/commands.md) for the current CLI structure.
+
 ## Project Layout
 
 ```text
 configs/                 Runtime YAML and legacy Python configurations
 example_data/            Data resources used by configuration examples
 scripts/
-  generate/              Specialized dataset generators
+  generate/              Auxiliary and experimental generators
   corpus/                Corpus construction and supplementation
   inspect/               Dataset statistics and visualization
   experiments/           Manual development experiments
 text_renderer/
   config/                Configuration models, loaders, and YAML parsing
+  pipelines/             End-to-end dataset generation pipelines
+  renderers/             Reusable domain renderers
   cli.py                  Command-line parsing and config overrides
+  postprocess.py          Shared dataset post-processing
   runner.py               Multiprocess rendering and dataset writing
-main.py                   Compatibility launcher
 ```
 
-Run the main generator with `python main.py`, `python -m text_renderer.cli`, or
-the installed `text-renderer` command. Run auxiliary commands as modules from
-the repository root, for example:
+All production generators use the installed `text-renderer` command or
+`python -m text_renderer.cli`:
+
+```powershell
+text-renderer single-line --config configs/multilingual.yaml
+text-renderer callnumber-multiline --help
+text-renderer callnumber-detection --help
+```
+
+Run auxiliary commands as modules from the repository root, for example:
 
 ```powershell
 python -m scripts.inspect.lmdb_char_statistics --help
@@ -46,11 +57,11 @@ git clone https://github.com/oh-my-ocr/text_renderer
 cd text_renderer
 python3 setup.py develop
 pip3 install -r docker/requirements.txt
-python3 main.py \
+text-renderer single-line \
     --config configs/examples/basic.py \
     --dataset img \
-    --num_processes 2 \
-    --log_period 10
+    --num-processes 2 \
+    --log-period 10
 ```
 
 The data is generated in the `example_data/output` directory. A `labels.json` file contains all annotations in follow format:
@@ -174,11 +185,8 @@ In the above configuration we have done the following things:
 4. Specifies font-related parameters: `font_size`, `font_dir`
 
 ### Run 
-Run `main.py`, it only has 4 arguments:
-- config：Python config file path
-- dataset: Dataset format `img` or `lmdb`
-- num_processes: Number of processes used
-- log_period: Period of log printing. (0, 100)
+Run `text-renderer single-line --help` to inspect the current arguments, or see
+[data generation commands](docs/commands.md).
 
 ## All Effect/Layout Examples
 
